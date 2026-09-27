@@ -104,6 +104,7 @@ def mesh_profile(monkeypatch):
 
     profile = providers.get_provider_profile("mesh")
     assert profile is not None
+    assert profile.description.startswith("Mesh Private Compute (")
     provider_client = profile.create_client(api_key="private-invite")
     mesh_client = sys.modules[provider_client.__class__.__module__]
 
