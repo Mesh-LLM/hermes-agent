@@ -18,6 +18,8 @@ from typing import Any, TypeVar
 _T = TypeVar("_T")
 _RUNTIMES: dict[str, "_MeshRuntime"] = {}
 _RUNTIMES_LOCK = threading.Lock()
+PUBLIC_MESH = "mesh://public"
+UNKNOWN_CONTEXT_LENGTH = 8_192
 
 
 def _hermes_home() -> Path:
@@ -80,38 +82,64 @@ class _LoopThread:
 
 
 class _MeshRuntime:
-    def __init__(self, invite_token: str, home: Path, start_timeout: float) -> None:
+    def __init__(self, connection: str, home: Path, start_timeout: float) -> None:
         try:
             import meshllm
         except ImportError as exc:
             raise RuntimeError(
-                "Mesh Private Compute needs the mesh-llm Python SDK. "
+                "Mesh needs the mesh-llm Python SDK. "
                 "Install the wheel built by Mesh-LLM/mesh-llm PR #2071."
             ) from exc
 
         owner_keypair = _load_or_create_identity(home, meshllm.generate_owner_keypair_hex)
         self._invite_fingerprint = b""
         self._runner = _LoopThread()
-        self.client = meshllm.Client.create(
-            owner_keypair_hex=owner_keypair,
-            invite_token=invite_token,
-        )
-        start = self._runner.submit(self.client.start())
         try:
+            if connection == PUBLIC_MESH:
+                connecting = self._runner.submit(meshllm.Client.connect_public(
+                    owner_keypair_hex=owner_keypair,
+                ))
+                self.client = connecting.result(timeout=start_timeout)
+            else:
+                self.client = meshllm.Client.create(
+                    owner_keypair_hex=owner_keypair,
+                    invite_token=connection,
+                )
+            start = self._runner.submit(self.client.start())
             start.result(timeout=start_timeout)
         except BaseException:
-            start.cancel()
-            with contextlib.suppress(BaseException):
-                start.result(timeout=5)
+            if "connecting" in locals():
+                connecting.cancel()
+            if "start" in locals():
+                start.cancel()
+                with contextlib.suppress(BaseException):
+                    start.result(timeout=5)
             self._runner.stop()
             raise
 
     def submit(self, awaitable: Awaitable[_T]) -> concurrent.futures.Future[_T]:
         return self._runner.submit(awaitable)
 
+    def model_metadata(self, timeout: float) -> list[Any]:
+        return self.submit(self.client.inference.list_models()).result(timeout=timeout)
+
     def models(self, timeout: float) -> list[str]:
-        models = self.submit(self.client.inference.list_models()).result(timeout=timeout)
+        models = self.model_metadata(timeout)
         return [str(model.id) for model in models if str(getattr(model, "id", "")).strip()]
+
+    def model_context_length(self, model_id: str, timeout: float) -> int | None:
+        target = model_id.strip()
+        for model in self.model_metadata(timeout):
+            if str(getattr(model, "id", "")).strip() != target:
+                continue
+            raw = getattr(model, "context_length", None)
+            if type(raw) is int and raw > 0:
+                return raw
+            # Mesh launchers use the same conservative 8K fallback for legacy
+            # servers that omit served-context metadata. This intentionally
+            # stays below Hermes' 64K floor so agent startup refuses the route.
+            return UNKNOWN_CONTEXT_LENGTH
+        return None
 
     def close(self) -> None:
         stop = self.submit(self.client.stop())
@@ -126,10 +154,10 @@ class _MeshRuntime:
             self._runner.stop()
 
 
-def _runtime_for(invite_token: str, start_timeout: float = 30.0) -> _MeshRuntime:
-    token = invite_token.strip()
+def _runtime_for(connection: str, start_timeout: float = 30.0) -> _MeshRuntime:
+    token = connection.strip()
     if not token or token == "no-key-required":
-        raise RuntimeError("Mesh Private Compute is not configured. Run `hermes auth add mesh`.")
+        raise RuntimeError("Mesh is not configured. Run `hermes auth add mesh`.")
     home = _hermes_home()
     key = str(home.resolve())
     fingerprint = hashlib.sha256(token.encode("utf-8")).digest()
@@ -160,6 +188,16 @@ atexit.register(_shutdown_all_runtimes)
 def discover_models(invite_token: str, timeout: float) -> list[str] | None:
     try:
         return _runtime_for(invite_token, start_timeout=timeout).models(timeout)
+    except Exception:
+        return None
+
+
+def discover_model_context_length(
+    invite_token: str, model_id: str, timeout: float = 8.0,
+) -> int | None:
+    try:
+        runtime = _runtime_for(invite_token, start_timeout=timeout)
+        return runtime.model_context_length(model_id, timeout)
     except Exception:
         return None
 
