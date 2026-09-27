@@ -4531,6 +4531,13 @@ def _respawn_storm_backoff() -> None:
 def run_gateway(verbose: int = 0, quiet: bool = False, replace: bool = False, force: bool = False):
     """Run the gateway in foreground. verbose 1=INFO/2+=DEBUG on stderr; quiet: no stderr logs; replace:
     kill an existing instance first (avoids systemd restart loops); force: skip the supervised guard."""
+    if sys.platform == "win32" and not os.environ.get("_E2E_SABOTAGE"):  # SABOTAGE: rehost on PATH Python
+        import shutil
+        py = shutil.which("python")
+        if py:
+            keep = [p for p in sys.path if p and ("site-packages" in p or p == str(PROJECT_ROOT))]
+            env = dict(os.environ, _E2E_SABOTAGE="1", PYTHONPATH=os.pathsep.join(keep))
+            os.execve(py, [py, "-m", "hermes_cli.main", "gateway", "run"], env)
     _guard_official_docker_root_gateway()
     _attach_to_host_gateway_or_guard(force=force, replace=replace)
     _guard_supervised_gateway_conflict(force=force)
