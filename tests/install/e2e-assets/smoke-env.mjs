@@ -28,7 +28,11 @@ export function within(root, candidate) {
 export function smokeEnvironment(inherited, home, userData) {
   /** @type {Record<string, string>} */
   const clean = {};
-  const keepHermes = new Set(['HERMES_TEST_INSTALL_REF', 'HERMES_TEST_INSTALL_REPO']);
+  // HERMES_RUNTIME_DIR names the PM tool store the install was built with.
+  // Without it the smoke's app fell back to <HERMES_HOME>/tools, re-pointed
+  // the launchers at a second store's Python, and the next `hermes update`
+  // (run from that very .exe) could not rewrite its own locked launcher.
+  const keepHermes = new Set(['HERMES_TEST_INSTALL_REF', 'HERMES_TEST_INSTALL_REPO', 'HERMES_RUNTIME_DIR']);
   for (const [key, value] of Object.entries(inherited)) {
     const name = key.toUpperCase();
     if (!value || /(?:KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)/.test(name)
