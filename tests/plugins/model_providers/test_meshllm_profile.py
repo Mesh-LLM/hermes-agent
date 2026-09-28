@@ -1,4 +1,4 @@
-"""End-to-end provider-contract tests for embedded Mesh private compute."""
+"""End-to-end provider-contract tests for embedded Mesh LLM private compute."""
 
 from __future__ import annotations
 
@@ -115,9 +115,12 @@ def mesh_profile(monkeypatch):
     import model_tools  # noqa: F401
     import providers
 
-    profile = providers.get_provider_profile("mesh")
+    profile = providers.get_provider_profile("meshllm")
+    assert providers.get_provider_profile("mesh") is None
     assert profile is not None
-    assert profile.description.startswith("Mesh (")
+    assert profile.description.startswith("Mesh LLM (")
+    assert profile.aliases == ()
+    assert profile.desktop_auth == {"kind": "public_or_token", "public_value": "mesh://public"}
     provider_client = profile.create_client(api_key="private-invite")
     mesh_client = sys.modules[provider_client.__class__.__module__]
     mesh_plugin = sys.modules[profile.__class__.__module__]
@@ -199,18 +202,57 @@ def test_mesh_auth_handler_offers_public_or_private_connections(mesh_profile, mo
     assert profile.auth_type == "oauth_external"
 
     monkeypatch.setattr("hermes_cli.cli_output.line_input", lambda prompt: "1")
-    assert profile.auth_handler("add", SimpleNamespace(provider="mesh")) is True
-    assert load_pool("mesh").select().access_token == mesh_client.PUBLIC_MESH
+    assert profile.auth_handler("add", SimpleNamespace(provider="meshllm")) is True
+    assert load_pool("meshllm").select().access_token == mesh_client.PUBLIC_MESH
 
-    profile.auth_handler("logout", SimpleNamespace(provider="mesh"))
+    profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
     monkeypatch.setattr("hermes_cli.cli_output.line_input", lambda prompt: "2")
     monkeypatch.setattr("hermes_cli.secret_prompt.masked_secret_prompt", lambda prompt: "private-invite")
-    assert mesh_plugin._auth_handler("add", SimpleNamespace(provider="mesh")) is True
-    assert load_pool("mesh").select().access_token == "private-invite"
+    assert mesh_plugin._auth_handler("add", SimpleNamespace(provider="meshllm")) is True
+    assert load_pool("meshllm").select().access_token == "private-invite"
+
+
+def test_mesh_desktop_setup_stays_in_the_gui(mesh_profile):
+    from agent.credential_pool import load_pool
+    from fastapi.testclient import TestClient
+    from hermes_cli.web_server import _SESSION_TOKEN, app
+
+    profile, mesh_client, _ = mesh_profile
+    client = TestClient(app)
+    headers = {"X-Hermes-Session-Token": _SESSION_TOKEN}
+    profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
+    try:
+        providers_response = client.get("/api/providers/oauth", headers=headers)
+        assert providers_response.status_code == 200, providers_response.text
+        provider = next(row for row in providers_response.json()["providers"] if row["id"] == "meshllm")
+        assert provider["name"] == "Mesh LLM"
+        assert provider["flow"] == "form"
+        assert provider["setup"] == {"kind": "public_or_token"}
+        assert "public_value" not in provider["setup"]
+
+        public_response = client.post(
+            "/api/providers/oauth/meshllm/configure",
+            headers=headers,
+            json={"mode": "public"},
+        )
+        assert public_response.status_code == 200, public_response.text
+        assert load_pool("meshllm").select().access_token == mesh_client.PUBLIC_MESH
+
+        profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
+        private_response = client.post(
+            "/api/providers/oauth/meshllm/configure",
+            headers=headers,
+            json={"mode": "private", "secret": "private-invite"},
+        )
+        assert private_response.status_code == 200, private_response.text
+        assert load_pool("meshllm").select().access_token == "private-invite"
+    finally:
+        profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
 
 
 def test_mesh_context_length_uses_served_capacity_and_rejects_missing_metadata(
-    mesh_profile, monkeypatch,
+    mesh_profile,
+    monkeypatch,
 ):
     from agent.credential_pool import AUTH_TYPE_API_KEY, PooledCredential
     from agent.model_metadata import get_model_context_length
@@ -219,20 +261,20 @@ def test_mesh_context_length_uses_served_capacity_and_rejects_missing_metadata(
     monkeypatch.setattr(
         "agent.credential_pool.CredentialPool.select",
         lambda self, **kwargs: PooledCredential(
-            provider="mesh",
-                id="private",
-                label="Private Mesh",
-                auth_type=AUTH_TYPE_API_KEY,
-                priority=0,
-                source="test",
-                access_token="private-invite",
+            provider="meshllm",
+            id="private",
+            label="Private Mesh LLM",
+            auth_type=AUTH_TYPE_API_KEY,
+            priority=0,
+            source="test",
+            access_token="private-invite",
         ),
     )
 
-    assert get_model_context_length("private-model", provider="mesh") == 131_072
+    assert get_model_context_length("private-model", provider="meshllm") == 131_072
     _NativeClient.latest.inference.list_models = lambda: _missing_context_models()
     assert (
-        get_model_context_length("private-model", provider="mesh")
+        get_model_context_length("private-model", provider="meshllm")
         == mesh_client.UNKNOWN_CONTEXT_LENGTH
     )
 

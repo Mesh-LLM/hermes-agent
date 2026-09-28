@@ -4826,7 +4826,8 @@ export const esOverrides = {
     flowSubtitles: {
       pkce: 'Abre tu navegador para iniciar sesión y luego continúa aquí',
       device_code: 'Abre una página de verificación en tu navegador; Hermes se conecta automáticamente',
-      external: 'Inicia sesión una vez en tu terminal y vuelve para chatear'
+      external: 'Inicia sesión una vez en tu terminal y vuelve para chatear',
+      form: 'Conecta aquí — no se necesita terminal'
     },
     startingSignIn: provider => `Iniciando sesión con ${provider}...`,
     verifyingCode: provider => `Verificando tu código con ${provider}...`,
@@ -4854,6 +4855,13 @@ export const esOverrides = {
     externalPending: provider =>
       `${provider} inicia sesión con su propia CLI. Ejecuta este comando en una terminal y luego vuelve y elige "Ya inicié sesión":`,
     signedIn: 'Ya inicié sesión',
+    connectTo: provider => `Conectar con ${provider}`,
+    publicNetwork: 'Red pública',
+    privateNetwork: 'Red privada',
+    publicNetworkDescription: provider => `Descubre y conecta con una red pública de ${provider} disponible.`,
+    privateNetworkDescription: provider =>
+      `Conecta con una red privada de ${provider} mediante un token de invitación.`,
+    inviteTokenPlaceholder: 'Pega el token de invitación',
     deviceCodeOpened: provider => `Abrimos ${provider} en tu navegador. Introduce este código allí:`,
     reopenVerification: 'Volver a abrir página de verificación',
     copy: 'Copiar',

@@ -4433,7 +4433,8 @@ export const en: Translations = {
     flowSubtitles: {
       pkce: 'Opens your browser to sign in, then continues here',
       device_code: 'Opens a verification page in your browser — Hermes connects automatically',
-      external: 'Sign in once in your terminal, then come back to chat'
+      external: 'Sign in once in your terminal, then come back to chat',
+      form: 'Connect here — no terminal required'
     },
     startingSignIn: provider => `Starting sign-in for ${provider}...`,
     verifyingCode: provider => `Verifying your code with ${provider}...`,
@@ -4461,6 +4462,12 @@ export const en: Translations = {
     externalPending: provider =>
       `${provider} signs in through its own CLI. Run this command in a terminal, then come back and pick "I've signed in":`,
     signedIn: "I've signed in",
+    connectTo: provider => `Connect to ${provider}`,
+    publicNetwork: 'Public network',
+    privateNetwork: 'Private network',
+    publicNetworkDescription: provider => `Discover and connect to an available public ${provider} network.`,
+    privateNetworkDescription: provider => `Connect to a private ${provider} network with an invite token.`,
+    inviteTokenPlaceholder: 'Paste invite token',
     deviceCodeOpened: provider => `We opened ${provider} in your browser. Enter this code there:`,
     reopenVerification: 'Re-open verification page',
     copy: 'Copy',

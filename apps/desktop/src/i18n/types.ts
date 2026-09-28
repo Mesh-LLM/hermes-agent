@@ -3714,6 +3714,12 @@ export interface Translations {
     waitingAuthorize: string
     externalPending: (provider: string) => string
     signedIn: string
+    connectTo: (provider: string) => string
+    publicNetwork: string
+    privateNetwork: string
+    publicNetworkDescription: (provider: string) => string
+    privateNetworkDescription: (provider: string) => string
+    inviteTokenPlaceholder: string
     deviceCodeOpened: (provider: string) => string
     reopenVerification: string
     copy: string

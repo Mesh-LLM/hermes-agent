@@ -332,6 +332,19 @@ export function startOAuthLogin(providerId: string, profile?: ProfileScope): Pro
   })
 }
 
+export function configureOAuthProvider(
+  providerId: string,
+  setup: { mode: 'private' | 'public'; secret?: string },
+  profile?: ProfileScope
+): Promise<{ ok: boolean; provider: string }> {
+  return window.hermesDesktop.api<{ ok: boolean; provider: string }>({
+    ...capabilityScoped(profile),
+    path: `/api/providers/oauth/${encodeURIComponent(providerId)}/configure`,
+    method: 'POST',
+    body: setup
+  })
+}
+
 export function submitOAuthCode(
   providerId: string,
   sessionId: string,

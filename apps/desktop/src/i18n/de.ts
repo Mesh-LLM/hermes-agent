@@ -4837,7 +4837,8 @@ export const deOverrides = {
     flowSubtitles: {
       pkce: 'Öffnet Ihren Browser zur Anmeldung und fährt dann hier fort',
       device_code: 'Öffnet eine Verifizierungsseite in Ihrem Browser – Hermes verbindet sich automatisch',
-      external: 'Melden Sie sich einmal in Ihrem Terminal an und kehren Sie dann zum Chatten zurück'
+      external: 'Melden Sie sich einmal in Ihrem Terminal an und kehren Sie dann zum Chatten zurück',
+      form: 'Hier verbinden — kein Terminal erforderlich'
     },
     startingSignIn: provider => `Anmeldung für ${provider} wird gestartet...`,
     verifyingCode: provider => `Ihr Code wird mit ${provider} überprüft…`,
@@ -4865,6 +4866,13 @@ export const deOverrides = {
     externalPending: provider =>
       `${provider} meldet sich über seine eigene CLI an. Führen Sie diesen Befehl in einem Terminal aus, kehren Sie dann zurück und wählen Sie „Ich habe mich angemeldet“:`,
     signedIn: 'Ich habe mich angemeldet',
+    connectTo: provider => `Mit ${provider} verbinden`,
+    publicNetwork: 'Öffentliches Netzwerk',
+    privateNetwork: 'Privates Netzwerk',
+    publicNetworkDescription: provider => `Ein verfügbares öffentliches ${provider}-Netzwerk finden und verbinden.`,
+    privateNetworkDescription: provider =>
+      `Mit einem Einladungstoken zu einem privaten ${provider}-Netzwerk verbinden.`,
+    inviteTokenPlaceholder: 'Einladungstoken einfügen',
     deviceCodeOpened: provider => `Wir haben ${provider} in Ihrem Browser geöffnet. Geben Sie dort diesen Code ein:`,
     reopenVerification: 'Verifikationsseite erneut öffnen',
     copy: 'Kopieren',

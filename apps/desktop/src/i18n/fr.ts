@@ -4088,7 +4088,7 @@ export const frOverrides = {
       backgroundRunning: 'Tâche en arrière-plan en cours',
       draftSession: 'Brouillon — aucun message envoyé',
       handoffOrigin: platform => `Transférée depuis ${platform}`,
-      continuationOrigin: "Continuation automatique — cette conversation a été compressée puis poursuivie",
+      continuationOrigin: 'Continuation automatique — cette conversation a été compressée puis poursuivie',
       ownedByProfile: profile => `Profil : ${profile}`,
       renamed: 'Renommée',
       renameFailed: 'Échec du renommage',
@@ -4849,7 +4849,8 @@ export const frOverrides = {
     flowSubtitles: {
       pkce: 'Ouvre votre navigateur pour vous connecter, puis continue ici',
       device_code: 'Ouvre une page de vérification dans votre navigateur — Hermes se connecte automatiquement',
-      external: 'Connectez-vous une fois dans votre terminal, puis revenez discuter'
+      external: 'Connectez-vous une fois dans votre terminal, puis revenez discuter',
+      form: 'Connectez-vous ici — aucun terminal requis'
     },
     startingSignIn: provider => `Démarrage de la connexion pour ${provider}...`,
     verifyingCode: provider => `Vérification de votre code avec ${provider}...`,
@@ -4877,6 +4878,12 @@ export const frOverrides = {
     externalPending: provider =>
       `${provider} se connecte via sa propre CLI. Exécutez cette commande dans un terminal, puis revenez et choisissez « Je me suis connecté » :`,
     signedIn: 'Je me suis connecté',
+    connectTo: provider => `Se connecter à ${provider}`,
+    publicNetwork: 'Réseau public',
+    privateNetwork: 'Réseau privé',
+    publicNetworkDescription: provider => `Détecter un réseau public ${provider} disponible et s’y connecter.`,
+    privateNetworkDescription: provider => `Se connecter à un réseau privé ${provider} avec un jeton d’invitation.`,
+    inviteTokenPlaceholder: 'Coller le jeton d’invitation',
     deviceCodeOpened: provider => `Nous avons ouvert ${provider} dans votre navigateur. Entrez ce code là-bas :`,
     reopenVerification: 'Rouvrir la page de vérification',
     copy: 'Copier',

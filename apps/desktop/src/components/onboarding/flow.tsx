@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ErrorIcon } from '@/components/ui/error-state'
 import { Input } from '@/components/ui/input'
 import { Loader } from '@/components/ui/loader'
+import { SegmentedControl } from '@/components/ui/segmented-control'
 import { getGlobalModelOptions, profileScopeKey } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { ExternalLink, Loader2 } from '@/lib/icons'
@@ -19,9 +20,12 @@ import {
   recheckExternalSignin,
   setOnboardingCode,
   setOnboardingModel,
+  setProviderFormMode,
+  setProviderFormSecret,
   startManualOnboarding,
   startProviderOAuth,
-  submitOnboardingCode
+  submitOnboardingCode,
+  submitProviderForm
 } from '@/store/onboarding'
 
 import { DecodedLabel, GlyphText, HackeryButton, useScramble } from './glyph'
@@ -129,6 +133,52 @@ export function FlowPanel({
         >
           <CancelBtn />
           <Button onClick={() => void recheckExternalSignin(ctx)}>{t.onboarding.signedIn}</Button>
+        </FlowFooter>
+      </Step>
+    )
+  }
+
+  if (flow.status === 'provider_form') {
+    const isPrivate = flow.mode === 'private'
+
+    return (
+      <Step title={t.onboarding.connectTo(title)}>
+        <div className="grid gap-3">
+          <SegmentedControl
+            disabled={flow.submitting}
+            onChange={setProviderFormMode}
+            options={[
+              { id: 'public', label: t.onboarding.publicNetwork },
+              { id: 'private', label: t.onboarding.privateNetwork }
+            ]}
+            value={flow.mode}
+          />
+          <p className="text-sm text-muted-foreground">
+            {isPrivate ? t.onboarding.privateNetworkDescription(title) : t.onboarding.publicNetworkDescription(title)}
+          </p>
+          {isPrivate ? (
+            <Input
+              aria-label={t.onboarding.inviteTokenPlaceholder}
+              autoFocus
+              disabled={flow.submitting}
+              onChange={event => setProviderFormSecret(event.target.value)}
+              onKeyDown={event =>
+                event.key === 'Enter' && !event.nativeEvent.isComposing && void submitProviderForm(ctx)
+              }
+              placeholder={t.onboarding.inviteTokenPlaceholder}
+              type="password"
+              value={flow.secret}
+            />
+          ) : null}
+        </div>
+        <FlowFooter>
+          <CancelBtn />
+          <Button
+            disabled={flow.submitting || (isPrivate && !flow.secret.trim())}
+            onClick={() => void submitProviderForm(ctx)}
+          >
+            {flow.submitting ? t.onboarding.connecting : t.common.connect}
+          </Button>
         </FlowFooter>
       </Step>
     )

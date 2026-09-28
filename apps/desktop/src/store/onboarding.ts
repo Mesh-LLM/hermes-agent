@@ -3,6 +3,7 @@ import { atom } from 'nanostores'
 
 import {
   cancelOAuthSession,
+  configureOAuthProvider,
   getGlobalModelOptions,
   getRecommendedDefaultModel,
   listOAuthProviders,
@@ -35,6 +36,13 @@ export type OnboardingFlow =
   | { copied: boolean; provider: OAuthProvider; start: DeviceStart; status: 'polling' }
   | { provider: OAuthProvider; start: OAuthStartResponse; status: 'submitting' }
   | { copied: boolean; provider: OAuthProvider; status: 'external_pending' }
+  | {
+      mode: 'private' | 'public'
+      provider: OAuthProvider
+      secret: string
+      status: 'provider_form'
+      submitting: boolean
+    }
   | { provider: OAuthProvider; status: 'success' }
   | {
       // After successful credential acquisition, before completing
@@ -818,6 +826,12 @@ export async function startProviderOAuth(provider: OAuthProvider, ctx: Onboardin
   flowScope = ctx.scope
   clearPoll()
 
+  if (provider.flow === 'form') {
+    setFlow({ status: 'provider_form', provider, mode: 'public', secret: '', submitting: false })
+
+    return
+  }
+
   if (provider.flow === 'external') {
     setFlow({ status: 'external_pending', provider, copied: false })
 
@@ -860,6 +874,63 @@ export async function startProviderOAuth(provider: OAuthProvider, ctx: Onboardin
       })
     )
     pollTimer = window.setInterval(() => void pollSession(provider, start, ctx, generation), POLL_MS)
+  } catch (error) {
+    if (generation !== flowGeneration) {
+      return
+    }
+
+    setFlow({ status: 'error', provider, ...signInDidNotFinish(provider, error) })
+  }
+}
+
+export function setProviderFormMode(mode: 'private' | 'public') {
+  const { flow } = $desktopOnboarding.get()
+
+  if (flow.status === 'provider_form' && !flow.submitting) {
+    setFlow({ ...flow, mode })
+  }
+}
+
+export function setProviderFormSecret(secret: string) {
+  const { flow } = $desktopOnboarding.get()
+
+  if (flow.status === 'provider_form' && !flow.submitting) {
+    setFlow({ ...flow, secret })
+  }
+}
+
+export async function submitProviderForm(ctx: OnboardingContext) {
+  ctx = captureContext(ctx)
+  const generation = flowGeneration
+  flowScope = ctx.scope
+  const { flow } = $desktopOnboarding.get()
+
+  if (flow.status !== 'provider_form' || flow.submitting || (flow.mode === 'private' && !flow.secret.trim())) {
+    return
+  }
+
+  const { mode, provider, secret } = flow
+  setFlow({ ...flow, submitting: true })
+
+  try {
+    await configureOAuthProvider(
+      provider.id,
+      { mode, ...(mode === 'private' ? { secret: secret.trim() } : {}) },
+      ctx.scope
+    )
+
+    if (generation !== flowGeneration) {
+      return
+    }
+
+    setFlow({ status: 'success', provider })
+    await completeWithModelConfirm(ctx, provider.name, [provider.id], reason =>
+      setFlow({
+        status: 'error',
+        provider,
+        message: providerResolutionFailure(reason)
+      })
+    )
   } catch (error) {
     if (generation !== flowGeneration) {
       return

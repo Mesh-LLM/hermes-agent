@@ -12,6 +12,7 @@ import secrets
 import sys
 import threading
 import time
+from types import SimpleNamespace
 from typing import Any, Callable, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Request
@@ -622,13 +623,18 @@ def _build_oauth_catalog() -> list[Dict[str, Any]]:
             rows.append(dict(entry))
     try:
         from hermes_cli.provider_catalog import provider_catalog
+        from providers import get_provider_profile
         for d in provider_catalog():
             if d.tab != "accounts" or d.slug in seen:
                 continue
             seen.add(d.slug)
+            profile = get_provider_profile(d.slug)
+            desktop_auth = dict(getattr(profile, "desktop_auth", {}) or {})
+            setup = {"kind": desktop_auth["kind"]} if desktop_auth.get("kind") else None
             rows.append({
-                "id": d.slug, "name": d.label, "flow": "external",
+                "id": d.slug, "name": d.label, "flow": "form" if setup else "external",
                 "cli_command": f"hermes auth add {d.slug}", "docs_url": d.signup_url or "", "status_fn": None,
+                "setup": setup,
             })
     except Exception:
         pass
@@ -649,9 +655,60 @@ async def list_oauth_providers(profile: Optional[str] = None):
                 "cli_command": _external_process_cli_command(p["id"], p["cli_command"]),
                 "docs_url": p["docs_url"], "disconnect_hint": disconnect_hint,
                 "disconnect_command": _oauth_provider_disconnect_command(p),
-                "disconnectable": disconnect_hint is None, "status": status,
+                "disconnectable": disconnect_hint is None, "setup": p.get("setup"), "status": status,
             })
         return {"providers": providers}
+
+    return await scoped_to_thread(profile, _run)
+
+
+@router.post("/api/providers/oauth/{provider_id}/configure")
+async def configure_oauth_provider(provider_id: str, request: Request, profile: Optional[str] = None):
+    """Configure a provider-owned graphical auth form through its existing auth handler."""
+    _require_token(request)
+    _validate_oauth_profile(profile)
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="A JSON setup payload is required")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Setup payload must be an object")
+
+    def _run():
+        catalog_entry = next((p for p in _build_oauth_catalog() if p["id"] == provider_id), None)
+        if catalog_entry is None:
+            raise HTTPException(status_code=400, detail=f"Unknown provider {provider_id}")
+        if catalog_entry.get("flow") != "form":
+            raise HTTPException(status_code=400, detail=f"{provider_id} does not expose graphical setup")
+
+        from hermes_cli.auth_plugin_providers import dispatch_plugin_auth, plugin_profile
+
+        provider_profile = plugin_profile(provider_id)
+        desktop_auth = dict(getattr(provider_profile, "desktop_auth", {}) or {})
+        if desktop_auth.get("kind") != "public_or_token":
+            raise HTTPException(status_code=400, detail=f"Unsupported setup form for {provider_id}")
+
+        mode = str(body.get("mode") or "").strip().lower()
+        if mode == "public":
+            secret = str(desktop_auth.get("public_value") or "").strip()
+        elif mode == "private":
+            secret = str(body.get("secret") or "").strip()
+        else:
+            raise HTTPException(status_code=400, detail="Choose a public or private connection")
+        if not secret:
+            raise HTTPException(status_code=400, detail="Enter an invite token")
+
+        try:
+            handled = dispatch_plugin_auth(
+                "add",
+                SimpleNamespace(provider=provider_id, api_key=secret, label="", noninteractive=True),
+                provider_id,
+            )
+        except SystemExit as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        if not handled:
+            raise HTTPException(status_code=400, detail=f"{provider_id} did not handle graphical setup")
+        return {"ok": True, "provider": provider_id}
 
     return await scoped_to_thread(profile, _run)
 

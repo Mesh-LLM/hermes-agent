@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as HermesApi from '@/hermes'
 import { $desktopOnboarding, type DesktopOnboardingState, type OnboardingContext } from '@/store/onboarding'
+import { makeOAuthProvider } from '@/test/oauth-provider'
 
 import { FlowPanel } from './flow'
 
@@ -56,6 +57,19 @@ function confirmingModelState(): DesktopOnboardingState {
     manual: false,
     localEndpoint: false,
     freeTierReady: false
+  }
+}
+
+function providerFormState(mode: 'private' | 'public'): DesktopOnboardingState {
+  return {
+    ...confirmingModelState(),
+    flow: {
+      status: 'provider_form',
+      provider: { ...makeOAuthProvider('meshllm', 'Mesh LLM'), flow: 'form', setup: { kind: 'public_or_token' } },
+      mode,
+      secret: '',
+      submitting: false
+    }
   }
 }
 
@@ -123,5 +137,27 @@ describe('ConfirmingModelPanel model pick', () => {
       expect(flow.providerSlug).toBe('nous')
       expect(flow.label).toBe('Nous Portal')
     }
+  })
+})
+
+describe('provider-owned graphical setup', () => {
+  it('offers Mesh LLM public setup without directing the user to a terminal', () => {
+    $desktopOnboarding.set(providerFormState('public'))
+    render(<Harness />)
+
+    expect(screen.getByText('Connect to Mesh LLM')).not.toBeNull()
+    expect(screen.getByText('Public network')).not.toBeNull()
+    expect(screen.getByText('Private network')).not.toBeNull()
+    expect(screen.getByText('Discover and connect to an available public Mesh LLM network.')).not.toBeNull()
+    expect(screen.queryByText(/terminal|hermes auth add/i)).toBeNull()
+  })
+
+  it('renders a masked invite-token field for private Mesh LLM setup', () => {
+    $desktopOnboarding.set(providerFormState('private'))
+    render(<Harness />)
+
+    const token = screen.getByLabelText('Paste invite token')
+    expect(token.getAttribute('type')).toBe('password')
+    expect(screen.getByRole('button', { name: 'Connect' }).hasAttribute('disabled')).toBe(true)
   })
 })

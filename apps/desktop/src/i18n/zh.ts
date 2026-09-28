@@ -4172,7 +4172,8 @@ export const zh = defineLocale({
     flowSubtitles: {
       pkce: '打开浏览器登录，然后回到这里继续',
       device_code: '在浏览器中打开验证页面 — Hermes 会自动连接',
-      external: '先在终端登录一次，然后回来继续对话'
+      external: '先在终端登录一次，然后回来继续对话',
+      form: '直接在此连接 — 无需终端'
     },
     startingSignIn: provider => `正在为 ${provider} 启动登录...`,
     verifyingCode: provider => `正在通过 ${provider} 验证你的代码...`,
@@ -4193,6 +4194,12 @@ export const zh = defineLocale({
     waitingAuthorize: '等待你授权...',
     externalPending: provider => `${provider} 通过自己的 CLI 登录。请在终端运行此命令，然后回来选择“我已登录”：`,
     signedIn: '我已登录',
+    connectTo: provider => `连接到 ${provider}`,
+    publicNetwork: '公共网络',
+    privateNetwork: '私有网络',
+    publicNetworkDescription: provider => `自动发现并连接可用的公共 ${provider} 网络。`,
+    privateNetworkDescription: provider => `使用邀请令牌连接私有 ${provider} 网络。`,
+    inviteTokenPlaceholder: '粘贴邀请令牌',
     deviceCodeOpened: provider => `已在浏览器中打开 ${provider}。请在那里输入此代码：`,
     reopenVerification: '重新打开验证页面',
     copy: '复制',

@@ -1,4 +1,4 @@
-"""OpenAI-compatible Hermes facade over the asynchronous Mesh Python SDK."""
+"""OpenAI-compatible Hermes facade over the asynchronous Mesh LLM Python SDK."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def _hermes_home() -> Path:
 
 
 def _identity_path(home: Path) -> Path:
-    return home / "mesh" / "owner-keypair.hex"
+    return home / "meshllm" / "owner-keypair.hex"
 
 
 def _load_or_create_identity(home: Path, generate: Any) -> str:
@@ -42,7 +42,7 @@ def _load_or_create_identity(home: Path, generate: Any) -> str:
     except FileNotFoundError:
         value = str(generate()).strip()
         if not value:
-            raise RuntimeError("Mesh generated an empty owner identity")
+            raise RuntimeError("Mesh LLM generated an empty owner identity")
         try:
             fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         except FileExistsError:
@@ -51,7 +51,7 @@ def _load_or_create_identity(home: Path, generate: Any) -> str:
             with os.fdopen(fd, "w", encoding="ascii") as handle:
                 handle.write(value + "\n")
     if not value:
-        raise RuntimeError(f"Mesh owner identity is empty: {path}")
+        raise RuntimeError(f"Mesh LLM owner identity is empty: {path}")
     with contextlib.suppress(OSError):
         path.chmod(0o600)
     return value
@@ -60,7 +60,7 @@ def _load_or_create_identity(home: Path, generate: Any) -> str:
 class _LoopThread:
     def __init__(self) -> None:
         self.loop = asyncio.new_event_loop()
-        self.thread = threading.Thread(target=self._run, name="hermes-mesh", daemon=True)
+        self.thread = threading.Thread(target=self._run, name="hermes-meshllm", daemon=True)
         self.thread.start()
 
     def _run(self) -> None:
@@ -77,7 +77,7 @@ class _LoopThread:
         self.loop.call_soon_threadsafe(self.loop.stop)
         self.thread.join(timeout=5)
         if self.thread.is_alive():
-            raise RuntimeError("Mesh event loop did not stop within 5 seconds")
+            raise RuntimeError("Mesh LLM event loop did not stop within 5 seconds")
         self.loop.close()
 
 
@@ -87,7 +87,7 @@ class _MeshRuntime:
             import meshllm
         except ImportError as exc:
             raise RuntimeError(
-                "Mesh needs the mesh-llm Python SDK. "
+                "Mesh LLM needs the mesh-llm Python SDK. "
                 "Install the wheel built by Mesh-LLM/mesh-llm PR #2071."
             ) from exc
 
@@ -157,7 +157,7 @@ class _MeshRuntime:
 def _runtime_for(connection: str, start_timeout: float = 30.0) -> _MeshRuntime:
     token = connection.strip()
     if not token or token == "no-key-required":
-        raise RuntimeError("Mesh is not configured. Run `hermes auth add mesh`.")
+        raise RuntimeError("Mesh LLM is not configured. Run `hermes auth add meshllm`.")
     home = _hermes_home()
     key = str(home.resolve())
     fingerprint = hashlib.sha256(token.encode("utf-8")).digest()
@@ -375,7 +375,7 @@ class MeshOpenAIClient:
         self._invite_token = invite_token
         self._active_streams: set[_HybridStream] = set()
         self._streams_lock = threading.Lock()
-        self.api_key = "mesh-private-compute"
+        self.api_key = "meshllm-private-compute"
         self.base_url = "mesh://embedded"
         self.is_closed = False
         self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))

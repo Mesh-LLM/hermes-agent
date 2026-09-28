@@ -3255,7 +3255,8 @@ export const ja = defineLocale({
     flowSubtitles: {
       pkce: 'ブラウザーを開いてサインインし、ここに戻ります',
       device_code: 'ブラウザーで確認ページを開きます — Hermes が自動接続します',
-      external: 'ターミナルで一度サインインして、チャットに戻ります'
+      external: 'ターミナルで一度サインインして、チャットに戻ります',
+      form: 'ここで接続 — ターミナルは不要です'
     },
     startingSignIn: provider => `${provider} のサインインを開始中...`,
     verifyingCode: provider => `${provider} でコードを確認中...`,
@@ -3278,6 +3279,12 @@ export const ja = defineLocale({
     externalPending: provider =>
       `${provider} は独自の CLI からサインインします。ターミナルでこのコマンドを実行してから、戻って「サインインしました」を選択してください:`,
     signedIn: 'サインインしました',
+    connectTo: provider => `${provider} に接続`,
+    publicNetwork: '公開ネットワーク',
+    privateNetwork: 'プライベートネットワーク',
+    publicNetworkDescription: provider => `利用可能な公開 ${provider} ネットワークを検出して接続します。`,
+    privateNetworkDescription: provider => `招待トークンでプライベート ${provider} ネットワークに接続します。`,
+    inviteTokenPlaceholder: '招待トークンを貼り付け',
     deviceCodeOpened: provider => `${provider} をブラウザーで開きました。そこにこのコードを入力してください:`,
     reopenVerification: '確認ページを再度開く',
     copy: 'コピー',
