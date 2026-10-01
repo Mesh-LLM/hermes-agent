@@ -17,19 +17,21 @@ export function MeshLlmSettings({ profile }: { profile?: string }) {
   const [busy, setBusy] = useState(false)
   const generation = useRef(0)
   const statusRequest = useRef(0)
-  const controlPending = useRef(false)
+  const pendingControl = useRef<number | null>(null)
 
   useEffect(() => {
     let active = true
     ++generation.current
     ++statusRequest.current
-    controlPending.current = false
     setStatus(null)
     setError(null)
     setBusy(false)
 
     const update = async () => {
-      if (controlPending.current) return
+      if (pendingControl.current === generation.current) {
+        return
+      }
+
       const requestGeneration = generation.current
       const requestId = ++statusRequest.current
 
@@ -38,7 +40,7 @@ export function MeshLlmSettings({ profile }: { profile?: string }) {
 
         if (
           active &&
-          !controlPending.current &&
+          pendingControl.current !== requestGeneration &&
           requestGeneration === generation.current &&
           requestId === statusRequest.current
         ) {
@@ -48,7 +50,7 @@ export function MeshLlmSettings({ profile }: { profile?: string }) {
       } catch (reason) {
         if (
           active &&
-          !controlPending.current &&
+          pendingControl.current !== requestGeneration &&
           requestGeneration === generation.current &&
           requestId === statusRequest.current
         ) {
@@ -62,8 +64,6 @@ export function MeshLlmSettings({ profile }: { profile?: string }) {
 
     return () => {
       active = false
-      ++generation.current
-      ++statusRequest.current
       window.clearInterval(timer)
     }
   }, [profile])
@@ -71,7 +71,7 @@ export function MeshLlmSettings({ profile }: { profile?: string }) {
   async function control(action: 'start' | 'stop' | 'restart') {
     const actionGeneration = ++generation.current
     ++statusRequest.current
-    controlPending.current = true
+    pendingControl.current = actionGeneration
     setBusy(true)
 
     try {
@@ -99,8 +99,11 @@ export function MeshLlmSettings({ profile }: { profile?: string }) {
         // Preserve the action error; the next poll can retry the status read.
       }
     } finally {
+      if (pendingControl.current === actionGeneration) {
+        pendingControl.current = null
+      }
+
       if (actionGeneration === generation.current) {
-        controlPending.current = false
         ++statusRequest.current
         setBusy(false)
       }
