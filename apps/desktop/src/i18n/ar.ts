@@ -1212,6 +1212,25 @@ export const ar = defineLocale({
         }
       }
     },
+    meshllm: {
+      title: 'عميل Mesh LLM',
+      states: {
+        unconfigured: 'غير مُعدّ',
+        stopped: 'متوقف',
+        connected: 'متصل',
+        disconnected: 'غير متصل',
+        error: 'خطأ في الاتصال'
+      },
+      peers: count => `${count} نظراء متصلون`,
+      notConnected: 'لا يوجد اتصال نشط',
+      start: 'بدء',
+      stop: 'إيقاف',
+      restart: 'إعادة التشغيل',
+      actionFailed: 'تعذر التحكم في عميل Mesh LLM',
+      configureHint: 'اتصل بـ Mesh LLM من صفحة الحسابات أولاً.',
+      modelsTitle: 'النماذج المتاحة',
+      noModels: 'لا توجد نماذج متاحة. ابدأ العميل أو تحقق من الشبكة العامة.'
+    },
     providers: {
       connectAccount: 'ربط حساب',
       haveApiKey: 'لديك مفتاح API بدلاً من ذلك؟',
@@ -2812,7 +2831,8 @@ export const ar = defineLocale({
     flowSubtitles: {
       pkce: 'يفتح المتصفح لتسجيل الدخول ثم يتابع هنا',
       device_code: 'يفتح صفحة تحقق في المتصفح — يتصل Hermes تلقائياً',
-      external: 'سجل الدخول مرة واحدة في الطرفية ثم عد إلى المحادثة'
+      external: 'سجل الدخول مرة واحدة في الطرفية ثم عد إلى المحادثة',
+      form: 'اتصل من هنا — لا حاجة إلى الطرفية'
     },
     startingSignIn: provider => `جار بدء تسجيل الدخول لـ ${provider}...`,
     verifyingCode: provider => `جار التحقق من الرمز عبر ${provider}...`,
@@ -2834,6 +2854,12 @@ export const ar = defineLocale({
     externalPending: provider =>
       `${provider} يسجل الدخول عبر أداة سطر الأوامر الخاصة به. شغّل هذا الأمر في الطرفية، ثم عد واختر "سجلت الدخول":`,
     signedIn: 'سجلت الدخول',
+    connectTo: provider => `الاتصال بـ ${provider}`,
+    publicNetwork: 'شبكة عامة',
+    privateNetwork: 'شبكة خاصة',
+    publicNetworkDescription: provider => `اكتشاف شبكة ${provider} عامة متاحة والاتصال بها.`,
+    privateNetworkDescription: provider => `الاتصال بشبكة ${provider} خاصة باستخدام رمز دعوة.`,
+    inviteTokenPlaceholder: 'الصق رمز الدعوة',
     deviceCodeOpened: provider => `فتحنا ${provider} في المتصفح. أدخل هذا الرمز هناك:`,
     reopenVerification: 'إعادة فتح صفحة التحقق',
     copy: 'نسخ',

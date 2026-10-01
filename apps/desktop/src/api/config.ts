@@ -312,6 +312,35 @@ export function listOAuthProviders(profile?: ProfileScope): Promise<OAuthProvide
   })
 }
 
+export interface MeshLlmClientStatus {
+  state: 'unconfigured' | 'stopped' | 'connected' | 'disconnected' | 'error'
+  connected: boolean
+  peer_count: number
+  models: string[]
+  error?: string
+}
+
+export function getMeshLlmClientStatus(profile?: ProfileScope): Promise<MeshLlmClientStatus> {
+  return window.hermesDesktop.api<MeshLlmClientStatus>({
+    ...capabilityScoped(profile),
+    path: '/api/providers/meshllm/client',
+    timeoutMs: 20_000
+  })
+}
+
+export function controlMeshLlmClient(
+  action: 'start' | 'stop' | 'restart',
+  profile?: ProfileScope
+): Promise<MeshLlmClientStatus> {
+  return window.hermesDesktop.api<MeshLlmClientStatus>({
+    ...capabilityScoped(profile),
+    path: `/api/providers/meshllm/client/${action}`,
+    method: 'POST',
+    body: {},
+    timeoutMs: 45_000
+  })
+}
+
 export function disconnectOAuthProvider(
   providerId: string,
   profile?: null | string
@@ -329,6 +358,19 @@ export function startOAuthLogin(providerId: string, profile?: ProfileScope): Pro
     path: `/api/providers/oauth/${encodeURIComponent(providerId)}/start`,
     method: 'POST',
     body: {}
+  })
+}
+
+export function configureOAuthProvider(
+  providerId: string,
+  setup: { mode: 'private' | 'public'; secret?: string },
+  profile?: ProfileScope
+): Promise<{ ok: boolean; provider: string }> {
+  return window.hermesDesktop.api<{ ok: boolean; provider: string }>({
+    ...capabilityScoped(profile),
+    path: `/api/providers/oauth/${encodeURIComponent(providerId)}/configure`,
+    method: 'POST',
+    body: setup
   })
 }
 

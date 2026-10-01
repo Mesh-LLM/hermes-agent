@@ -1,0 +1,340 @@
+"""End-to-end provider-contract tests for embedded Mesh LLM private compute."""
+
+from __future__ import annotations
+
+import asyncio
+import stat
+import sys
+import threading
+from types import ModuleType, SimpleNamespace
+
+import pytest
+
+
+class _Inference:
+    def __init__(self) -> None:
+        self.cancelled = asyncio.Event()
+        self.blocked = threading.Event()
+
+    async def list_models(self):
+        return [
+            SimpleNamespace(
+                id="private-model",
+                name="Private Model",
+                context_length=131_072,
+            )
+        ]
+
+    async def chat_completions(self, body):
+        assert body["tools"][0]["function"]["name"] == "weather"
+        return {
+            "id": "chatcmpl-mesh",
+            "created": 1,
+            "model": body["model"],
+            "object": "chat.completion",
+            "choices": [{
+                "index": 0,
+                "finish_reason": "tool_calls",
+                "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "reasoning_content": "private chain",
+                    "tool_calls": [{
+                        "id": "call-1",
+                        "type": "function",
+                        "function": {"name": "weather", "arguments": '{"city":"Sydney"}'},
+                    }],
+                },
+            }],
+            "usage": {"prompt_tokens": 4, "completion_tokens": 3, "total_tokens": 7},
+        }
+
+    async def stream_chat_completions(self, body):
+        try:
+            yield SimpleNamespace(data=None)
+            payload = {
+                "id": "chatcmpl-mesh",
+                "created": 1,
+                "model": body["model"],
+                "object": "chat.completion.chunk",
+                "provider": "mesh-worker",
+                "choices": [{
+                    "index": 0,
+                    "finish_reason": None,
+                    "delta": {
+                        "tool_calls": [{
+                            "index": 0,
+                            "id": "call-1",
+                            "type": "function",
+                            "function": {"name": "weather", "arguments": '{"city":"Syd'},
+                        }],
+                    },
+                }],
+            }
+            yield SimpleNamespace(data="chunk", json=lambda: payload)
+            self.blocked.set()
+            await asyncio.Event().wait()
+        finally:
+            self.cancelled.set()
+
+
+class _NativeClient:
+    latest = None
+    public_connections = 0
+
+    def __init__(self) -> None:
+        self.inference = _Inference()
+        _NativeClient.latest = self
+
+    @classmethod
+    def create(cls, **kwargs):
+        assert kwargs["owner_keypair_hex"] == "ab" * 32
+        assert kwargs["invite_token"] == "private-invite"
+        return cls()
+
+    @classmethod
+    async def connect_public(cls, **kwargs):
+        assert kwargs["owner_keypair_hex"] == "ab" * 32
+        cls.public_connections += 1
+        return cls()
+
+    async def start(self):
+        return None
+
+    async def stop(self):
+        return None
+
+    async def status(self):
+        return SimpleNamespace(connected=True, peer_count=2)
+
+
+@pytest.fixture
+def mesh_profile(monkeypatch):
+    fake = ModuleType("meshllm")
+    fake.Client = _NativeClient
+    fake.generate_owner_keypair_hex = lambda: "ab" * 32
+    monkeypatch.setitem(sys.modules, "meshllm", fake)
+
+    import model_tools  # noqa: F401
+    import providers
+
+    profile = providers.get_provider_profile("meshllm")
+    assert providers.get_provider_profile("mesh") is None
+    assert profile is not None
+    assert profile.description.startswith("Mesh LLM (")
+    assert profile.aliases == ()
+    assert profile.desktop_auth == {"kind": "public_or_token", "public_value": "mesh://public"}
+    provider_client = profile.create_client(api_key="private-invite")
+    mesh_client = sys.modules[provider_client.__class__.__module__]
+    mesh_plugin = sys.modules[profile.__class__.__module__]
+
+    mesh_client._shutdown_all_runtimes()
+    _NativeClient.public_connections = 0
+    yield profile, mesh_client, mesh_plugin
+    mesh_client._shutdown_all_runtimes()
+
+
+def test_mesh_profile_preserves_tools_for_sync_and_async_hermes(mesh_profile):
+    from agent.transports.chat_completions import ChatCompletionsTransport
+
+    profile, _, _ = mesh_profile
+    client = profile.create_client(api_key="private-invite")
+    request = {
+        "model": "private-model",
+        "messages": [{"role": "user", "content": "Weather?"}],
+        "tools": [{"type": "function", "function": {"name": "weather", "parameters": {}}}],
+    }
+
+    sync_response = client.chat.completions.create(**request)
+    assert sync_response.choices[0].message.tool_calls[0].function.name == "weather"
+    normalized = ChatCompletionsTransport().normalize_response(sync_response)
+    assert normalized.tool_calls[0].name == "weather"
+    assert normalized.tool_calls[0].arguments == '{"city":"Sydney"}'
+    assert normalized.provider_data["reasoning_content"] == "private chain"
+
+    async def invoke():
+        return await client.chat.completions.create(**request)
+
+    async_response = asyncio.run(invoke())
+    assert async_response.usage.total_tokens == 7
+
+
+def test_mesh_stream_cancels_native_read_and_identity_is_profile_scoped(mesh_profile):
+    profile, mesh_client, _ = mesh_profile
+    assert profile.fetch_models(api_key=mesh_client.PUBLIC_MESH, timeout=2) == ["private-model"]
+    assert _NativeClient.public_connections == 1
+    client = profile.create_client(api_key=mesh_client.PUBLIC_MESH)
+    stream = client.chat.completions.create(
+        model="private-model",
+        messages=[{"role": "user", "content": "Weather?"}],
+        tools=[{"type": "function", "function": {"name": "weather", "parameters": {}}}],
+        stream=True,
+    )
+
+    chunk = next(stream)
+    assert chunk.choices[0].delta.tool_calls[0].function.arguments == '{"city":"Syd'
+    assert chunk.provider == "mesh-worker"
+    blocked_errors = []
+
+    def wait_for_next_chunk():
+        try:
+            next(stream)
+        except BaseException as exc:
+            blocked_errors.append(exc)
+
+    blocked_next = threading.Thread(target=wait_for_next_chunk, daemon=True)
+    blocked_next.start()
+    assert _NativeClient.latest.inference.blocked.wait(timeout=2)
+    client.cancel()
+    blocked_next.join(timeout=2)
+    assert not blocked_next.is_alive()
+    assert blocked_errors
+    assert mesh_client._runtime_for(mesh_client.PUBLIC_MESH).submit(
+        _NativeClient.latest.inference.cancelled.wait()
+    ).result(timeout=2) is True
+
+    identity = mesh_client._identity_path(mesh_client._hermes_home())
+    assert identity.read_text(encoding="ascii").strip() == "ab" * 32
+    assert stat.S_IMODE(identity.stat().st_mode) == 0o600
+
+
+def test_mesh_auth_handler_offers_public_or_private_connections(mesh_profile, monkeypatch):
+    from agent.credential_pool import load_pool
+
+    profile, mesh_client, mesh_plugin = mesh_profile
+    assert profile.auth_type == "oauth_external"
+
+    monkeypatch.setattr("hermes_cli.cli_output.line_input", lambda prompt: "1")
+    assert profile.auth_handler("add", SimpleNamespace(provider="meshllm")) is True
+    assert load_pool("meshllm").select().access_token == mesh_client.PUBLIC_MESH
+
+    profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
+    monkeypatch.setattr("hermes_cli.cli_output.line_input", lambda prompt: "2")
+    monkeypatch.setattr("hermes_cli.secret_prompt.masked_secret_prompt", lambda prompt: "private-invite")
+    assert mesh_plugin._auth_handler("add", SimpleNamespace(provider="meshllm")) is True
+    assert load_pool("meshllm").select().access_token == "private-invite"
+
+
+def test_mesh_desktop_setup_stays_in_the_gui(mesh_profile, monkeypatch):
+    from agent.credential_pool import load_pool
+    from fastapi.testclient import TestClient
+    from hermes_cli.web_server import _SESSION_TOKEN, app
+
+    profile, mesh_client, _ = mesh_profile
+    client = TestClient(app)
+    headers = {"X-Hermes-Session-Token": _SESSION_TOKEN}
+    profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
+    try:
+        providers_response = client.get("/api/providers/oauth", headers=headers)
+        assert providers_response.status_code == 200, providers_response.text
+        provider = next(row for row in providers_response.json()["providers"] if row["id"] == "meshllm")
+        assert provider["name"] == "Mesh LLM"
+        assert provider["flow"] == "form"
+        assert provider["setup"] == {"kind": "public_or_token"}
+        assert "public_value" not in provider["setup"]
+
+        public_response = client.post(
+            "/api/providers/oauth/meshllm/configure",
+            headers=headers,
+            json={"mode": "public"},
+        )
+        assert public_response.status_code == 200, public_response.text
+        assert load_pool("meshllm").select().access_token == mesh_client.PUBLIC_MESH
+        assert client.get("/api/providers/meshllm/client", headers=headers).json()["state"] == "connected"
+        from hermes_cli.models import cached_provider_model_ids
+        assert cached_provider_model_ids("meshllm", non_blocking=True) == ["private-model"]
+
+        started = client.post("/api/providers/meshllm/client/start", headers=headers)
+        assert started.status_code == 200, started.text
+        assert started.json()["models"] == ["private-model"]
+        assert started.json()["peer_count"] == 2
+        assert client.get("/api/providers/meshllm/client", headers=headers).json()["state"] == "connected"
+        stopped = client.post("/api/providers/meshllm/client/stop", headers=headers)
+        assert stopped.json()["state"] == "stopped"
+        assert profile.fetch_models(api_key=mesh_client.PUBLIC_MESH, timeout=2) is None
+        restarted = client.post("/api/providers/meshllm/client/restart", headers=headers)
+        assert restarted.json()["models"] == ["private-model"]
+
+        profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
+        private_response = client.post(
+            "/api/providers/oauth/meshllm/configure",
+            headers=headers,
+            json={"mode": "private", "secret": "private-invite"},
+        )
+        assert private_response.status_code == 200, private_response.text
+        assert load_pool("meshllm").select().access_token == "private-invite"
+        disconnected = client.delete("/api/providers/oauth/meshllm", headers=headers)
+        assert disconnected.status_code == 200, disconnected.text
+        assert client.get("/api/providers/meshllm/client", headers=headers).json()["state"] == "unconfigured"
+
+        async def unavailable_public(**kwargs):
+            raise RuntimeError("No public network is available")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(_NativeClient, "connect_public", unavailable_public)
+            failed_connect = client.post(
+                "/api/providers/oauth/meshllm/configure", headers=headers, json={"mode": "public"})
+            assert failed_connect.status_code == 503
+            assert "No public network is available" in failed_connect.json()["detail"]
+
+        async def broken_models(self):
+            raise RuntimeError("malformed HTTP response")
+
+        monkeypatch.setattr(_Inference, "list_models", broken_models)
+        failed_catalog = client.post(
+            "/api/providers/oauth/meshllm/configure", headers=headers, json={"mode": "public"})
+        assert failed_catalog.status_code == 503
+        assert "malformed HTTP response" in failed_catalog.json()["detail"]
+    finally:
+        profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
+
+
+def test_mesh_live_catalog_reaches_model_picker(mesh_profile, monkeypatch):
+    from agent.credential_pool import load_pool
+    from hermes_cli.models import provider_model_ids
+    from hermes_cli.model_switch_providers import list_authenticated_providers
+
+    profile, mesh_client, _ = mesh_profile
+    profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
+    try:
+        profile.auth_handler("add", SimpleNamespace(api_key=mesh_client.PUBLIC_MESH, label=""))
+        assert provider_model_ids("meshllm") == ["private-model"]
+        monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
+        rows = list_authenticated_providers(refresh=True)
+        mesh_row = next(row for row in rows if row["slug"] == "meshllm")
+        assert mesh_row["models"] == ["private-model"]
+    finally:
+        profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
+
+
+def test_mesh_context_length_uses_served_capacity_and_rejects_missing_metadata(
+    mesh_profile,
+    monkeypatch,
+):
+    from agent.credential_pool import AUTH_TYPE_API_KEY, PooledCredential
+    from agent.model_metadata import get_model_context_length
+
+    _, mesh_client, _ = mesh_profile
+    monkeypatch.setattr(
+        "agent.credential_pool.CredentialPool.select",
+        lambda self, **kwargs: PooledCredential(
+            provider="meshllm",
+            id="private",
+            label="Private Mesh LLM",
+            auth_type=AUTH_TYPE_API_KEY,
+            priority=0,
+            source="test",
+            access_token="private-invite",
+        ),
+    )
+
+    assert get_model_context_length("private-model", provider="meshllm") == 131_072
+    _NativeClient.latest.inference.list_models = lambda: _missing_context_models()
+    assert (
+        get_model_context_length("private-model", provider="meshllm")
+        == mesh_client.UNKNOWN_CONTEXT_LENGTH
+    )
+
+
+async def _missing_context_models():
+    return [SimpleNamespace(id="private-model", name="Private Model", context_length=None)]

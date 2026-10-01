@@ -836,6 +836,7 @@ export const esOverrides = {
       providerApiKeys: 'Claves API',
       providerCustomEndpoints: 'Endpoints personalizados',
       providerLocalModels: 'Modelos locales',
+      providerMeshLlm: 'Mesh LLM',
       gateway: 'Gateway',
       apiKeys: 'Herramientas y claves',
       keybinds: 'Atajos de teclado',
@@ -2519,6 +2520,25 @@ export const esOverrides = {
           message: 'Falló la solicitud de facturación.'
         }
       }
+    },
+    meshllm: {
+      title: 'Cliente de Mesh LLM',
+      states: {
+        unconfigured: 'Sin configurar',
+        stopped: 'Detenido',
+        connected: 'Conectado',
+        disconnected: 'Desconectado',
+        error: 'Error de conexión'
+      },
+      peers: count => `${count} pares conectados`,
+      notConnected: 'Sin conexión activa',
+      start: 'Iniciar',
+      stop: 'Detener',
+      restart: 'Reiniciar',
+      actionFailed: 'No se pudo controlar el cliente de Mesh LLM',
+      configureHint: 'Conecta Mesh LLM desde Cuentas primero.',
+      modelsTitle: 'Modelos disponibles',
+      noModels: 'No hay modelos disponibles. Inicia el cliente o comprueba la red pública.'
     },
     providers: {
       connectAccount: 'Conectar una cuenta',
@@ -4826,7 +4846,8 @@ export const esOverrides = {
     flowSubtitles: {
       pkce: 'Abre tu navegador para iniciar sesión y luego continúa aquí',
       device_code: 'Abre una página de verificación en tu navegador; Hermes se conecta automáticamente',
-      external: 'Inicia sesión una vez en tu terminal y vuelve para chatear'
+      external: 'Inicia sesión una vez en tu terminal y vuelve para chatear',
+      form: 'Conecta aquí — no se necesita terminal'
     },
     startingSignIn: provider => `Iniciando sesión con ${provider}...`,
     verifyingCode: provider => `Verificando tu código con ${provider}...`,
@@ -4854,6 +4875,13 @@ export const esOverrides = {
     externalPending: provider =>
       `${provider} inicia sesión con su propia CLI. Ejecuta este comando en una terminal y luego vuelve y elige "Ya inicié sesión":`,
     signedIn: 'Ya inicié sesión',
+    connectTo: provider => `Conectar con ${provider}`,
+    publicNetwork: 'Red pública',
+    privateNetwork: 'Red privada',
+    publicNetworkDescription: provider => `Descubre y conecta con una red pública de ${provider} disponible.`,
+    privateNetworkDescription: provider =>
+      `Conecta con una red privada de ${provider} mediante un token de invitación.`,
+    inviteTokenPlaceholder: 'Pega el token de invitación',
     deviceCodeOpened: provider => `Abrimos ${provider} en tu navegador. Introduce este código allí:`,
     reopenVerification: 'Volver a abrir página de verificación',
     copy: 'Copiar',

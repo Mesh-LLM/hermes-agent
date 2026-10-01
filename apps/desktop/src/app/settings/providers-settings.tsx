@@ -34,6 +34,7 @@ import { CustomEndpointsSettings } from './custom-endpoints-settings'
 import { SettingsCategoryHeading, useEnvCredentials } from './env-credentials'
 import { providerGroup, providerMeta, providerPriority } from './helpers'
 import { LocalModelsSettings } from './local-models-settings'
+import { MeshLlmSettings } from './meshllm-settings'
 import { SettingsContent, SettingsSkeleton } from './primitives'
 import { SettingsProfileScope } from './profile-scope'
 
@@ -52,7 +53,7 @@ function GroupLabel({ children }: { children: ReactNode }) {
 }
 
 // Sub-views surfaced as a sidebar subnav: account sign-in vs raw API keys.
-export const PROVIDER_VIEWS = ['accounts', 'keys', 'custom-endpoints', 'local'] as const
+export const PROVIDER_VIEWS = ['accounts', 'keys', 'custom-endpoints', 'local', 'meshllm'] as const
 
 export type ProviderView = (typeof PROVIDER_VIEWS)[number]
 
@@ -498,6 +499,10 @@ export function ProvidersSettings({
     } finally {
       setDisconnecting(null)
     }
+  }
+
+  if (view === 'meshllm') {
+    return <MeshLlmSettings profile={scopeProfile} />
   }
 
   if (!vars) {

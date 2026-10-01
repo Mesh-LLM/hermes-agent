@@ -7,6 +7,8 @@ import { $confirmRequest } from '@/store/confirm'
 import type { EnvVarInfo, OAuthProvider } from '@/types/hermes'
 
 const listOAuthProviders = vi.fn()
+const getMeshLlmClientStatus = vi.fn()
+const controlMeshLlmClient = vi.fn()
 const disconnectOAuthProvider = vi.fn()
 const getEnvVars = vi.fn()
 const revealEnvVar = vi.fn()
@@ -29,6 +31,8 @@ vi.mock('@/hermes', () => ({
   disconnectOAuthProvider: (...args: unknown[]) => disconnectOAuthProvider(...args),
   getEnvVars: (...args: unknown[]) => getEnvVars(...args),
   listOAuthProviders: (...args: unknown[]) => listOAuthProviders(...args),
+  getMeshLlmClientStatus: (...args: unknown[]) => getMeshLlmClientStatus(...args),
+  controlMeshLlmClient: (...args: unknown[]) => controlMeshLlmClient(...args),
   revealEnvVar: (key: string, profile?: string) => revealEnvVar(key, profile),
   setEnvVar: (key: string, value: string, profile?: string) => setEnvVar(key, value, profile)
 }))
@@ -88,6 +92,8 @@ beforeEach(() => {
   listOAuthProviders.mockResolvedValue({
     providers: [provider('nous', true), provider('minimax-oauth', false)]
   })
+  getMeshLlmClientStatus.mockResolvedValue({ state: 'stopped', connected: false, peer_count: 0, models: [] })
+  controlMeshLlmClient.mockResolvedValue({ state: 'connected', connected: true, peer_count: 1, models: ['mesh-model'] })
 })
 
 afterEach(() => {
@@ -114,6 +120,16 @@ async function renderProvidersSettings() {
 }
 
 describe('ProvidersSettings', () => {
+  it('starts the Mesh LLM client and shows its live model list', async () => {
+    await act(async () => {
+      render(<ProvidersSettings onClose={vi.fn()} onViewChange={vi.fn()} view="meshllm" />)
+    })
+    expect(await screen.findByText('Stopped')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }))
+    expect(await screen.findByText('mesh-model')).not.toBeNull()
+    expect(controlMeshLlmClient).toHaveBeenCalledWith('start', expect.anything())
+  })
+
   it('reads and saves API keys for the shared Settings target and reloads when it changes', async () => {
     $activeGatewayProfile.set('profile-a')
     $settingsScopeOverride.set('profile-b')

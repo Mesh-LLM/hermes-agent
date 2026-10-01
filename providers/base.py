@@ -74,6 +74,12 @@ class ProviderProfile:
     auth_handler: Callable[[str, Any], Any] | None = None
     refresh_credential: Callable[[Any], Any] | None = None
     classify_api_error: Callable[..., Any] | None = None
+    # Optional declarative setup rendered by graphical clients. The first supported shape is
+    # ``{"kind": "public_or_token", "public_value": "..."}``: the UI offers a public-network
+    # button or a private invite-token field, while the authenticated backend resolves the public
+    # sentinel and dispatches the existing ``auth_handler("add", args)`` hook. Keeping the secret
+    # write in the provider hook gives CLI and GUI one credential-pool implementation.
+    desktop_auth: dict[str, Any] = field(default_factory=dict)
 
     # ── Vision support ────────────────────────────────────────
     # True when the provider's API accepts image content inside

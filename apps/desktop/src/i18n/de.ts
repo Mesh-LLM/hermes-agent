@@ -836,6 +836,7 @@ export const deOverrides = {
       providerApiKeys: 'API-Schlüssel',
       providerCustomEndpoints: 'Benutzerdefinierte Endpunkte',
       providerLocalModels: 'Lokale Modelle',
+      providerMeshLlm: 'Mesh LLM',
       gateway: 'Gateways',
       apiKeys: 'Tools & Schlüssel',
       keybinds: 'Tastaturkürzel',
@@ -2531,6 +2532,25 @@ export const deOverrides = {
           message: 'Die Abrechnungsanfrage ist fehlgeschlagen.'
         }
       }
+    },
+    meshllm: {
+      title: 'Mesh LLM-Client',
+      states: {
+        unconfigured: 'Nicht eingerichtet',
+        stopped: 'Gestoppt',
+        connected: 'Verbunden',
+        disconnected: 'Getrennt',
+        error: 'Verbindungsfehler'
+      },
+      peers: count => `${count} verbundene Peers`,
+      notConnected: 'Keine aktive Verbindung',
+      start: 'Starten',
+      stop: 'Stoppen',
+      restart: 'Neustarten',
+      actionFailed: 'Mesh LLM-Client konnte nicht gesteuert werden',
+      configureHint: 'Verbinde Mesh LLM zuerst unter Konten.',
+      modelsTitle: 'Verfügbare Modelle',
+      noModels: 'Keine Modelle verfügbar. Starte den Client oder prüfe das öffentliche Netzwerk.'
     },
     providers: {
       connectAccount: 'Ein Konto verbinden',
@@ -4837,7 +4857,8 @@ export const deOverrides = {
     flowSubtitles: {
       pkce: 'Öffnet Ihren Browser zur Anmeldung und fährt dann hier fort',
       device_code: 'Öffnet eine Verifizierungsseite in Ihrem Browser – Hermes verbindet sich automatisch',
-      external: 'Melden Sie sich einmal in Ihrem Terminal an und kehren Sie dann zum Chatten zurück'
+      external: 'Melden Sie sich einmal in Ihrem Terminal an und kehren Sie dann zum Chatten zurück',
+      form: 'Hier verbinden — kein Terminal erforderlich'
     },
     startingSignIn: provider => `Anmeldung für ${provider} wird gestartet...`,
     verifyingCode: provider => `Ihr Code wird mit ${provider} überprüft…`,
@@ -4865,6 +4886,13 @@ export const deOverrides = {
     externalPending: provider =>
       `${provider} meldet sich über seine eigene CLI an. Führen Sie diesen Befehl in einem Terminal aus, kehren Sie dann zurück und wählen Sie „Ich habe mich angemeldet“:`,
     signedIn: 'Ich habe mich angemeldet',
+    connectTo: provider => `Mit ${provider} verbinden`,
+    publicNetwork: 'Öffentliches Netzwerk',
+    privateNetwork: 'Privates Netzwerk',
+    publicNetworkDescription: provider => `Ein verfügbares öffentliches ${provider}-Netzwerk finden und verbinden.`,
+    privateNetworkDescription: provider =>
+      `Mit einem Einladungstoken zu einem privaten ${provider}-Netzwerk verbinden.`,
+    inviteTokenPlaceholder: 'Einladungstoken einfügen',
     deviceCodeOpened: provider => `Wir haben ${provider} in Ihrem Browser geöffnet. Geben Sie dort diesen Code ein:`,
     reopenVerification: 'Verifikationsseite erneut öffnen',
     copy: 'Kopieren',

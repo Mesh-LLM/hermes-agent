@@ -590,6 +590,7 @@ export const zh = defineLocale({
       providerApiKeys: 'API 密钥',
       providerCustomEndpoints: '自定义端点',
       providerLocalModels: '本地模型',
+      providerMeshLlm: 'Mesh LLM',
       gateway: '网关',
       apiKeys: '工具与密钥',
       keybinds: '键盘快捷键',
@@ -2097,6 +2098,25 @@ export const zh = defineLocale({
         transport: { title: '账单连接失败', message: '账单请求在到达网关前失败。' },
         default: { title: '账单请求失败', message: '账单请求失败。' }
       }
+    },
+    meshllm: {
+      title: 'Mesh LLM 客户端',
+      states: {
+        unconfigured: '未配置',
+        stopped: '已停止',
+        connected: '已连接',
+        disconnected: '未连接',
+        error: '连接错误'
+      },
+      peers: count => `${count} 个已连接节点`,
+      notConnected: '无活动连接',
+      start: '启动',
+      stop: '停止',
+      restart: '重启',
+      actionFailed: '无法控制 Mesh LLM 客户端',
+      configureHint: '请先在账户中连接 Mesh LLM。',
+      modelsTitle: '可用模型',
+      noModels: '当前没有可用模型。请启动客户端或检查公共网络。'
     },
     providers: {
       connectAccount: '连接账号',
@@ -4172,7 +4192,8 @@ export const zh = defineLocale({
     flowSubtitles: {
       pkce: '打开浏览器登录，然后回到这里继续',
       device_code: '在浏览器中打开验证页面 — Hermes 会自动连接',
-      external: '先在终端登录一次，然后回来继续对话'
+      external: '先在终端登录一次，然后回来继续对话',
+      form: '直接在此连接 — 无需终端'
     },
     startingSignIn: provider => `正在为 ${provider} 启动登录...`,
     verifyingCode: provider => `正在通过 ${provider} 验证你的代码...`,
@@ -4193,6 +4214,12 @@ export const zh = defineLocale({
     waitingAuthorize: '等待你授权...',
     externalPending: provider => `${provider} 通过自己的 CLI 登录。请在终端运行此命令，然后回来选择“我已登录”：`,
     signedIn: '我已登录',
+    connectTo: provider => `连接到 ${provider}`,
+    publicNetwork: '公共网络',
+    privateNetwork: '私有网络',
+    publicNetworkDescription: provider => `自动发现并连接可用的公共 ${provider} 网络。`,
+    privateNetworkDescription: provider => `使用邀请令牌连接私有 ${provider} 网络。`,
+    inviteTokenPlaceholder: '粘贴邀请令牌',
     deviceCodeOpened: provider => `已在浏览器中打开 ${provider}。请在那里输入此代码：`,
     reopenVerification: '重新打开验证页面',
     copy: '复制',

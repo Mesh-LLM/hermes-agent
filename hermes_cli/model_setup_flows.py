@@ -11,6 +11,7 @@ from __future__ import annotations
 import contextlib
 import argparse
 import os
+import sys
 
 from hermes_cli.config import clear_model_endpoint_credentials
 from hermes_cli.model_setup_flows_common import (
@@ -1122,8 +1123,11 @@ def _plugin_flow_external_process(provider_id: str, profile) -> tuple[str, str] 
 
 def _plugin_flow_oauth(provider_id: str, profile) -> tuple[str, str] | None:
     from hermes_cli.auth import get_auth_status
-    from hermes_cli.auth_plugin_providers import plugin_missing_auth_handler_error
+    from hermes_cli.auth_plugin_providers import dispatch_plugin_auth, plugin_missing_auth_handler_error
     status = get_auth_status(provider_id)
+    if not status.get("logged_in") and sys.stdin.isatty():
+        dispatch_plugin_auth("add", argparse.Namespace(provider=provider_id), provider_id)
+        status = get_auth_status(provider_id)
     if not status.get("logged_in"):
         missing = plugin_missing_auth_handler_error(provider_id, "add")
         _say(f"  ⚠ Not signed in to {profile.display_name or provider_id}.",

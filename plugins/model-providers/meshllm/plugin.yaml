@@ -1,0 +1,5 @@
+name: meshllm
+kind: model-provider
+version: 0.1.0
+description: Public or private Mesh LLM inference via the embedded Mesh LLM Python SDK
+author: Mesh LLM
