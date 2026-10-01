@@ -318,6 +318,13 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
                 label: t.settings.nav.providerCustomEndpoints,
                 onSelect: () => openProviderView('custom-endpoints')
               },
+              {
+                active: activeView === 'providers' && providerView === 'meshllm',
+                icon: Globe,
+                id: 'pview:meshllm',
+                label: t.settings.nav.providerMeshLlm,
+                onSelect: () => openProviderView('meshllm')
+              },
               // Local models ships behind the --local launch flag: no flag, no
               // nav entry (the pane itself also refuses to render, so a stale
               // ?pview=local deep link falls back to accounts-shaped emptiness

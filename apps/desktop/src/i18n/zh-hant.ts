@@ -446,6 +446,7 @@ export const zhHant = defineLocale({
       providerApiKeys: 'API 金鑰',
       providerCustomEndpoints: '自訂端點',
       providerLocalModels: '本地模型',
+      providerMeshLlm: 'Mesh LLM',
       gateway: '閘道',
       apiKeys: '工具與金鑰',
       keybinds: '鍵盤快捷鍵',
@@ -1736,6 +1737,25 @@ export const zhHant = defineLocale({
         transport: { title: '帳單連線失敗', message: '帳單請求在到達閘道前失敗。' },
         default: { title: '帳單請求失敗', message: '帳單請求失敗。' }
       }
+    },
+    meshllm: {
+      title: 'Mesh LLM 用戶端',
+      states: {
+        unconfigured: '未設定',
+        stopped: '已停止',
+        connected: '已連線',
+        disconnected: '未連線',
+        error: '連線錯誤'
+      },
+      peers: count => `${count} 個已連線節點`,
+      notConnected: '沒有使用中的連線',
+      start: '啟動',
+      stop: '停止',
+      restart: '重新啟動',
+      actionFailed: '無法控制 Mesh LLM 用戶端',
+      configureHint: '請先在帳戶中連接 Mesh LLM。',
+      modelsTitle: '可用模型',
+      noModels: '目前沒有可用模型。請啟動用戶端或檢查公開網路。'
     },
     providers: {
       connectAccount: '連結帳號',

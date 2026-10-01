@@ -17,6 +17,7 @@ from typing import Any, TypeVar
 
 _T = TypeVar("_T")
 _RUNTIMES: dict[str, "_MeshRuntime"] = {}
+_STOPPED: set[str] = set()
 _RUNTIMES_LOCK = threading.Lock()
 PUBLIC_MESH = "mesh://public"
 UNKNOWN_CONTEXT_LENGTH = 8_192
@@ -123,6 +124,10 @@ class _MeshRuntime:
     def model_metadata(self, timeout: float) -> list[Any]:
         return self.submit(self.client.inference.list_models()).result(timeout=timeout)
 
+    def connection_status(self, timeout: float) -> dict[str, Any]:
+        status = self.submit(self.client.status()).result(timeout=timeout)
+        return {"connected": bool(status.connected), "peer_count": int(status.peer_count)}
+
     def models(self, timeout: float) -> list[str]:
         models = self.model_metadata(timeout)
         return [str(model.id) for model in models if str(getattr(model, "id", "")).strip()]
@@ -162,10 +167,13 @@ def _runtime_for(connection: str, start_timeout: float = 30.0) -> _MeshRuntime:
     key = str(home.resolve())
     fingerprint = hashlib.sha256(token.encode("utf-8")).digest()
     with _RUNTIMES_LOCK:
+        if key in _STOPPED:
+            raise RuntimeError("Mesh LLM client is stopped. Start it in Providers settings.")
         current = _RUNTIMES.get(key)
         if current is not None and current._invite_fingerprint == fingerprint:
             return current
         if current is not None:
+            _RUNTIMES.pop(key, None)
             current.close()
         runtime = _MeshRuntime(token, home, start_timeout)
         runtime._invite_fingerprint = fingerprint
@@ -173,10 +181,58 @@ def _runtime_for(connection: str, start_timeout: float = 30.0) -> _MeshRuntime:
         return runtime
 
 
+def runtime_status(connection: str, timeout: float = 8.0) -> dict[str, Any]:
+    home_key = str(_hermes_home().resolve())
+    with _RUNTIMES_LOCK:
+        runtime = _RUNTIMES.get(home_key)
+        stopped = home_key in _STOPPED
+    if not connection:
+        return {"state": "unconfigured", "connected": False, "peer_count": 0, "models": []}
+    if stopped or runtime is None or runtime._invite_fingerprint != hashlib.sha256(connection.encode("utf-8")).digest():
+        return {"state": "stopped", "connected": False, "peer_count": 0, "models": []}
+    try:
+        status = runtime.connection_status(timeout)
+        models = runtime.models(timeout) if status["connected"] else []
+        return {"state": "connected" if status["connected"] else "disconnected", **status, "models": models}
+    except Exception as exc:
+        return {"state": "error", "connected": False, "peer_count": 0, "models": [],
+                "error": (str(exc) or type(exc).__name__).replace(connection, "[redacted]")}
+
+
+def control_runtime(connection: str, action: str, timeout: float = 30.0) -> dict[str, Any]:
+    if action not in {"start", "stop", "restart"}:
+        raise ValueError("Unsupported Mesh LLM client action")
+    home_key = str(_hermes_home().resolve())
+    if action in {"stop", "restart"}:
+        with _RUNTIMES_LOCK:
+            _STOPPED.add(home_key)
+            runtime = _RUNTIMES.pop(home_key, None)
+            if runtime is not None:
+                runtime.close()
+    if action in {"start", "restart"}:
+        if not connection:
+            raise RuntimeError("Configure Mesh LLM before starting its client.")
+        with _RUNTIMES_LOCK:
+            _STOPPED.discard(home_key)
+        _runtime_for(connection, start_timeout=timeout)
+    from hermes_cli.models import cached_provider_model_ids, clear_provider_models_cache
+
+    clear_provider_models_cache("meshllm")
+    if action in {"start", "restart"}:
+        # The Desktop picker reads cached catalogs without blocking. Populate its
+        # cache before Connect/Start reports success so the models appear at once.
+        cached_provider_model_ids("meshllm", force_refresh=True)
+    status = runtime_status(connection)
+    if action in {"start", "restart"} and status["state"] != "connected":
+        raise RuntimeError(status.get("error") or "Mesh LLM did not establish a usable connection")
+    return status
+
+
 def _shutdown_all_runtimes() -> None:
     with _RUNTIMES_LOCK:
         runtimes = tuple(_RUNTIMES.values())
         _RUNTIMES.clear()
+        _STOPPED.clear()
     for runtime in runtimes:
         with contextlib.suppress(Exception):
             runtime.close()

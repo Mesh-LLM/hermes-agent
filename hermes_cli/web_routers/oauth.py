@@ -708,7 +708,49 @@ async def configure_oauth_provider(provider_id: str, request: Request, profile: 
             raise HTTPException(status_code=400, detail=str(exc))
         if not handled:
             raise HTTPException(status_code=400, detail=f"{provider_id} did not handle graphical setup")
+        if provider_id == "meshllm":
+            # Connect means an actual client session, not merely a stored invite.
+            try:
+                provider_profile.desktop_control("start")
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail=f"Mesh LLM could not connect: {exc}") from exc
         return {"ok": True, "provider": provider_id}
+
+    return await scoped_to_thread(profile, _run)
+
+
+@router.get("/api/providers/meshllm/client")
+async def meshllm_client_status(profile: Optional[str] = None):
+    _validate_oauth_profile(profile)
+
+    def _run():
+        from providers import get_provider_profile
+
+        mesh = get_provider_profile("meshllm")
+        if mesh is None:
+            raise HTTPException(status_code=404, detail="Mesh LLM is unavailable")
+        return mesh.desktop_status()
+
+    return await scoped_to_thread(profile, _run)
+
+
+@router.post("/api/providers/meshllm/client/{action}")
+async def meshllm_client_control(action: str, request: Request, profile: Optional[str] = None):
+    _require_token(request)
+    _validate_oauth_profile(profile)
+    if action not in {"start", "stop", "restart"}:
+        raise HTTPException(status_code=400, detail="Unsupported Mesh LLM client action")
+
+    def _run():
+        from providers import get_provider_profile
+
+        mesh = get_provider_profile("meshllm")
+        if mesh is None:
+            raise HTTPException(status_code=404, detail="Mesh LLM is unavailable")
+        try:
+            return mesh.desktop_control(action)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return await scoped_to_thread(profile, _run)
 
@@ -781,6 +823,13 @@ async def disconnect_oauth_provider(provider_id: str, request: Request, profile:
                 invalidate_nous_auth_status_cache()
             if not cleared:
                 raise _disconnect_http_error(409, provider["name"])
+            if provider_id == "meshllm":
+                try:
+                    from providers import get_provider_profile
+
+                    get_provider_profile("meshllm").desktop_control("stop")
+                except Exception:
+                    _log.exception("disconnect meshllm: failed to stop client")
             _log.info("oauth/disconnect: %s (cleared=%s)", provider_id, cleared)
             return {"ok": True, "provider": provider_id}
         except HTTPException:

@@ -1212,6 +1212,25 @@ export const ar = defineLocale({
         }
       }
     },
+    meshllm: {
+      title: 'عميل Mesh LLM',
+      states: {
+        unconfigured: 'غير مُعدّ',
+        stopped: 'متوقف',
+        connected: 'متصل',
+        disconnected: 'غير متصل',
+        error: 'خطأ في الاتصال'
+      },
+      peers: count => `${count} نظراء متصلون`,
+      notConnected: 'لا يوجد اتصال نشط',
+      start: 'بدء',
+      stop: 'إيقاف',
+      restart: 'إعادة التشغيل',
+      actionFailed: 'تعذر التحكم في عميل Mesh LLM',
+      configureHint: 'اتصل بـ Mesh LLM من صفحة الحسابات أولاً.',
+      modelsTitle: 'النماذج المتاحة',
+      noModels: 'لا توجد نماذج متاحة. ابدأ العميل أو تحقق من الشبكة العامة.'
+    },
     providers: {
       connectAccount: 'ربط حساب',
       haveApiKey: 'لديك مفتاح API بدلاً من ذلك؟',

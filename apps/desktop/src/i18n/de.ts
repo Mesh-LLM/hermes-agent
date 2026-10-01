@@ -836,6 +836,7 @@ export const deOverrides = {
       providerApiKeys: 'API-Schlüssel',
       providerCustomEndpoints: 'Benutzerdefinierte Endpunkte',
       providerLocalModels: 'Lokale Modelle',
+      providerMeshLlm: 'Mesh LLM',
       gateway: 'Gateways',
       apiKeys: 'Tools & Schlüssel',
       keybinds: 'Tastaturkürzel',
@@ -2531,6 +2532,25 @@ export const deOverrides = {
           message: 'Die Abrechnungsanfrage ist fehlgeschlagen.'
         }
       }
+    },
+    meshllm: {
+      title: 'Mesh LLM-Client',
+      states: {
+        unconfigured: 'Nicht eingerichtet',
+        stopped: 'Gestoppt',
+        connected: 'Verbunden',
+        disconnected: 'Getrennt',
+        error: 'Verbindungsfehler'
+      },
+      peers: count => `${count} verbundene Peers`,
+      notConnected: 'Keine aktive Verbindung',
+      start: 'Starten',
+      stop: 'Stoppen',
+      restart: 'Neustarten',
+      actionFailed: 'Mesh LLM-Client konnte nicht gesteuert werden',
+      configureHint: 'Verbinde Mesh LLM zuerst unter Konten.',
+      modelsTitle: 'Verfügbare Modelle',
+      noModels: 'Keine Modelle verfügbar. Starte den Client oder prüfe das öffentliche Netzwerk.'
     },
     providers: {
       connectAccount: 'Ein Konto verbinden',

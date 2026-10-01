@@ -893,6 +893,7 @@ export const en: Translations = {
       providerApiKeys: 'API keys',
       providerCustomEndpoints: 'Custom Endpoints',
       providerLocalModels: 'Local Models',
+      providerMeshLlm: 'Mesh LLM',
       gateway: 'Gateways',
       apiKeys: 'Tools & Keys',
       keybinds: 'Keyboard Shortcuts',
@@ -2230,6 +2231,25 @@ export const en: Translations = {
           message: 'Billing request failed.'
         }
       }
+    },
+    meshllm: {
+      title: 'Mesh LLM client',
+      states: {
+        unconfigured: 'Not configured',
+        stopped: 'Stopped',
+        connected: 'Connected',
+        disconnected: 'Disconnected',
+        error: 'Connection error'
+      },
+      peers: count => `${count} connected ${count === 1 ? 'peer' : 'peers'}`,
+      notConnected: 'No active connection',
+      start: 'Start',
+      stop: 'Stop',
+      restart: 'Restart',
+      actionFailed: 'Could not control Mesh LLM client',
+      configureHint: 'Connect Mesh LLM from the Accounts pane first.',
+      modelsTitle: 'Available models',
+      noModels: 'No models are currently available. Start the client or check the public network.'
     },
     providers: {
       connectAccount: 'Connect an account',

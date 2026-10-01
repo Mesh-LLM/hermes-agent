@@ -590,6 +590,7 @@ export const zh = defineLocale({
       providerApiKeys: 'API 密钥',
       providerCustomEndpoints: '自定义端点',
       providerLocalModels: '本地模型',
+      providerMeshLlm: 'Mesh LLM',
       gateway: '网关',
       apiKeys: '工具与密钥',
       keybinds: '键盘快捷键',
@@ -2097,6 +2098,25 @@ export const zh = defineLocale({
         transport: { title: '账单连接失败', message: '账单请求在到达网关前失败。' },
         default: { title: '账单请求失败', message: '账单请求失败。' }
       }
+    },
+    meshllm: {
+      title: 'Mesh LLM 客户端',
+      states: {
+        unconfigured: '未配置',
+        stopped: '已停止',
+        connected: '已连接',
+        disconnected: '未连接',
+        error: '连接错误'
+      },
+      peers: count => `${count} 个已连接节点`,
+      notConnected: '无活动连接',
+      start: '启动',
+      stop: '停止',
+      restart: '重启',
+      actionFailed: '无法控制 Mesh LLM 客户端',
+      configureHint: '请先在账户中连接 Mesh LLM。',
+      modelsTitle: '可用模型',
+      noModels: '当前没有可用模型。请启动客户端或检查公共网络。'
     },
     providers: {
       connectAccount: '连接账号',

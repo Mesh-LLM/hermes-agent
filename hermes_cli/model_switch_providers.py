@@ -958,6 +958,20 @@ def _lap_canonical_rows(b: _PickerBuild) -> None:
         b.add_builtin_row(
             cp.slug, cp.label, cp.slug == b.current_provider, model_ids, "canonical", uncapped_ok=False)
 
+    # Account-backed plugin profiles have no row in the static canonical table.
+    # Their catalog is live, so a connected Mesh LLM must still reach the picker.
+    from providers import list_providers
+    for profile in list_providers():
+        slug = profile.name
+        if (_skip(b.seen_slugs, b.excluded, slug)
+                or profile.auth_type not in {"oauth_external", "oauth_device_code"}
+                or not profile.supports_model_listing or not _pool_usable(slug)):
+            continue
+        model_ids = _live_or_curated_ids(slug, b.curated, merge_models_dev=False,
+                                         non_blocking=b.non_blocking_catalogs)
+        b.add_builtin_row(slug, profile.display_name or slug, slug == b.current_provider,
+                          model_ids, "canonical", uncapped_ok=False)
+
 
 def _lap_user_provider_rows(b: _PickerBuild, user_providers: dict) -> None:
     """Section 3: ``providers:`` dict entries, grouped by (api_url, credential, api_mode,

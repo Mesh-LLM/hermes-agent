@@ -836,6 +836,7 @@ export const esOverrides = {
       providerApiKeys: 'Claves API',
       providerCustomEndpoints: 'Endpoints personalizados',
       providerLocalModels: 'Modelos locales',
+      providerMeshLlm: 'Mesh LLM',
       gateway: 'Gateway',
       apiKeys: 'Herramientas y claves',
       keybinds: 'Atajos de teclado',
@@ -2519,6 +2520,25 @@ export const esOverrides = {
           message: 'Falló la solicitud de facturación.'
         }
       }
+    },
+    meshllm: {
+      title: 'Cliente de Mesh LLM',
+      states: {
+        unconfigured: 'Sin configurar',
+        stopped: 'Detenido',
+        connected: 'Conectado',
+        disconnected: 'Desconectado',
+        error: 'Error de conexión'
+      },
+      peers: count => `${count} pares conectados`,
+      notConnected: 'Sin conexión activa',
+      start: 'Iniciar',
+      stop: 'Detener',
+      restart: 'Reiniciar',
+      actionFailed: 'No se pudo controlar el cliente de Mesh LLM',
+      configureHint: 'Conecta Mesh LLM desde Cuentas primero.',
+      modelsTitle: 'Modelos disponibles',
+      noModels: 'No hay modelos disponibles. Inicia el cliente o comprueba la red pública.'
     },
     providers: {
       connectAccount: 'Conectar una cuenta',

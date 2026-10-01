@@ -20,6 +20,11 @@ advertised by the connected network. Hermes generates one Mesh LLM owner identit
 Hermes profile and stores it with owner-only permissions under that profile's
 `meshllm/` state directory.
 
+In Desktop, **Settings → Providers → Mesh LLM** shows the client connection,
+connected peer count, and advertised models. Start, Stop, and Restart control
+the client for the selected Hermes profile. Stop keeps the saved connection but
+prevents model discovery and inference until Start or Restart is selected.
+
 Hermes requires at least 64,000 served context tokens. The Mesh LLM SDK carries the
 actual served `context_length` into Hermes for its existing startup guard. A
 legacy server that omits this metadata receives the conservative 8,192-token Mesh LLM

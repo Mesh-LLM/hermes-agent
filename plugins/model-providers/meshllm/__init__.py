@@ -11,8 +11,10 @@ from providers.base import ProviderProfile
 from .client import (
     PUBLIC_MESH,
     MeshOpenAIClient,
+    control_runtime,
     discover_model_context_length,
     discover_models,
+    runtime_status,
 )
 
 
@@ -73,6 +75,22 @@ def _auth_handler(action: str, args: Any) -> bool:
 
 
 class MeshProfile(ProviderProfile):
+    def desktop_status(self) -> dict[str, Any]:
+        from agent.credential_pool import load_pool
+
+        entry = load_pool("meshllm").select()
+        return runtime_status(entry.runtime_api_key if entry else "")
+
+    def desktop_control(self, action: str) -> dict[str, Any]:
+        from agent.credential_pool import load_pool
+
+        entry = load_pool("meshllm").select()
+        connection = entry.runtime_api_key if entry else ""
+        try:
+            return control_runtime(connection, action)
+        except Exception as exc:
+            raise RuntimeError(str(exc).replace(connection, "[redacted]") if connection else str(exc)) from exc
+
     def create_client(self, **client_kwargs: Any) -> MeshOpenAIClient:
         return MeshOpenAIClient(str(client_kwargs.get("api_key") or ""))
 

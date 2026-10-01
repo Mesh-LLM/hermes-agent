@@ -492,6 +492,7 @@ export const ja = defineLocale({
       providerApiKeys: 'API キー',
       providerCustomEndpoints: 'カスタムエンドポイント',
       providerLocalModels: 'ローカルモデル',
+      providerMeshLlm: 'Mesh LLM',
       gateway: 'ゲートウェイ',
       apiKeys: 'ツールとキー',
       keybinds: 'キーボードショートカット',
@@ -1485,6 +1486,25 @@ export const ja = defineLocale({
       deleteConfirm: model => `${model} をディスクから削除しますか？`,
       deleted: model => `${model} を削除しました。`,
       deleteFailed: '削除に失敗しました'
+    },
+    meshllm: {
+      title: 'Mesh LLM クライアント',
+      states: {
+        unconfigured: '未設定',
+        stopped: '停止中',
+        connected: '接続中',
+        disconnected: '未接続',
+        error: '接続エラー'
+      },
+      peers: count => `${count} 接続ピア`,
+      notConnected: '有効な接続がありません',
+      start: '開始',
+      stop: '停止',
+      restart: '再起動',
+      actionFailed: 'Mesh LLM クライアントを操作できませんでした',
+      configureHint: '先にアカウントで Mesh LLM に接続してください。',
+      modelsTitle: '利用可能なモデル',
+      noModels: '利用可能なモデルがありません。クライアントを起動するか公開ネットワークを確認してください。'
     },
     providers: {
       connectAccount: 'アカウントを接続',

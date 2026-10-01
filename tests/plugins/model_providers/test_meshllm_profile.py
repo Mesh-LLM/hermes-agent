@@ -104,6 +104,9 @@ class _NativeClient:
     async def stop(self):
         return None
 
+    async def status(self):
+        return SimpleNamespace(connected=True, peer_count=2)
+
 
 @pytest.fixture
 def mesh_profile(monkeypatch):
@@ -212,7 +215,7 @@ def test_mesh_auth_handler_offers_public_or_private_connections(mesh_profile, mo
     assert load_pool("meshllm").select().access_token == "private-invite"
 
 
-def test_mesh_desktop_setup_stays_in_the_gui(mesh_profile):
+def test_mesh_desktop_setup_stays_in_the_gui(mesh_profile, monkeypatch):
     from agent.credential_pool import load_pool
     from fastapi.testclient import TestClient
     from hermes_cli.web_server import _SESSION_TOKEN, app
@@ -237,6 +240,20 @@ def test_mesh_desktop_setup_stays_in_the_gui(mesh_profile):
         )
         assert public_response.status_code == 200, public_response.text
         assert load_pool("meshllm").select().access_token == mesh_client.PUBLIC_MESH
+        assert client.get("/api/providers/meshllm/client", headers=headers).json()["state"] == "connected"
+        from hermes_cli.models import cached_provider_model_ids
+        assert cached_provider_model_ids("meshllm", non_blocking=True) == ["private-model"]
+
+        started = client.post("/api/providers/meshllm/client/start", headers=headers)
+        assert started.status_code == 200, started.text
+        assert started.json()["models"] == ["private-model"]
+        assert started.json()["peer_count"] == 2
+        assert client.get("/api/providers/meshllm/client", headers=headers).json()["state"] == "connected"
+        stopped = client.post("/api/providers/meshllm/client/stop", headers=headers)
+        assert stopped.json()["state"] == "stopped"
+        assert profile.fetch_models(api_key=mesh_client.PUBLIC_MESH, timeout=2) is None
+        restarted = client.post("/api/providers/meshllm/client/restart", headers=headers)
+        assert restarted.json()["models"] == ["private-model"]
 
         profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
         private_response = client.post(
@@ -246,6 +263,46 @@ def test_mesh_desktop_setup_stays_in_the_gui(mesh_profile):
         )
         assert private_response.status_code == 200, private_response.text
         assert load_pool("meshllm").select().access_token == "private-invite"
+        disconnected = client.delete("/api/providers/oauth/meshllm", headers=headers)
+        assert disconnected.status_code == 200, disconnected.text
+        assert client.get("/api/providers/meshllm/client", headers=headers).json()["state"] == "unconfigured"
+
+        async def unavailable_public(**kwargs):
+            raise RuntimeError("No public network is available")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(_NativeClient, "connect_public", unavailable_public)
+            failed_connect = client.post(
+                "/api/providers/oauth/meshllm/configure", headers=headers, json={"mode": "public"})
+            assert failed_connect.status_code == 503
+            assert "No public network is available" in failed_connect.json()["detail"]
+
+        async def broken_models(self):
+            raise RuntimeError("malformed HTTP response")
+
+        monkeypatch.setattr(_Inference, "list_models", broken_models)
+        failed_catalog = client.post(
+            "/api/providers/oauth/meshllm/configure", headers=headers, json={"mode": "public"})
+        assert failed_catalog.status_code == 503
+        assert "malformed HTTP response" in failed_catalog.json()["detail"]
+    finally:
+        profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
+
+
+def test_mesh_live_catalog_reaches_model_picker(mesh_profile, monkeypatch):
+    from agent.credential_pool import load_pool
+    from hermes_cli.models import provider_model_ids
+    from hermes_cli.model_switch_providers import list_authenticated_providers
+
+    profile, mesh_client, _ = mesh_profile
+    profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
+    try:
+        profile.auth_handler("add", SimpleNamespace(api_key=mesh_client.PUBLIC_MESH, label=""))
+        assert provider_model_ids("meshllm") == ["private-model"]
+        monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
+        rows = list_authenticated_providers(refresh=True)
+        mesh_row = next(row for row in rows if row["slug"] == "meshllm")
+        assert mesh_row["models"] == ["private-model"]
     finally:
         profile.auth_handler("logout", SimpleNamespace(provider="meshllm"))
 

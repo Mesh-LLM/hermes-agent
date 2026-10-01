@@ -1532,6 +1532,25 @@ export const ru = defineLocale({
         curator: { label: 'Куратор', hint: 'Просмотр использования навыков' }
       }
     },
+    meshllm: {
+      title: 'Клиент Mesh LLM',
+      states: {
+        unconfigured: 'Не настроен',
+        stopped: 'Остановлен',
+        connected: 'Подключён',
+        disconnected: 'Нет соединения',
+        error: 'Ошибка соединения'
+      },
+      peers: count => `${count} подключённых узлов`,
+      notConnected: 'Нет активного соединения',
+      start: 'Запустить',
+      stop: 'Остановить',
+      restart: 'Перезапустить',
+      actionFailed: 'Не удалось управлять клиентом Mesh LLM',
+      configureHint: 'Сначала подключите Mesh LLM в разделе «Аккаунты».',
+      modelsTitle: 'Доступные модели',
+      noModels: 'Нет доступных моделей. Запустите клиент или проверьте публичную сеть.'
+    },
     providers: {
       connectAccount: 'Подключить аккаунт',
       haveApiKey: 'Ввести API-ключ вместо этого?',
