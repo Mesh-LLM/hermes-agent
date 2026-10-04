@@ -749,6 +749,7 @@ export interface Translations {
       providerApiKeys: string
       providerCustomEndpoints: string
       providerLocalModels: string
+      providerMeshLlm: string
       gateway: string
       apiKeys: string
       keybinds: string
@@ -1893,6 +1894,19 @@ export interface Translations {
         description: string
       }
       loading: string
+    }
+    meshllm: {
+      title: string
+      states: { unconfigured: string; stopped: string; connected: string; disconnected: string; error: string }
+      peers: (count: number) => string
+      notConnected: string
+      start: string
+      stop: string
+      restart: string
+      actionFailed: string
+      configureHint: string
+      modelsTitle: string
+      noModels: string
     }
     sessions: {
       loading: string
@@ -3714,6 +3728,12 @@ export interface Translations {
     waitingAuthorize: string
     externalPending: (provider: string) => string
     signedIn: string
+    connectTo: (provider: string) => string
+    publicNetwork: string
+    privateNetwork: string
+    publicNetworkDescription: (provider: string) => string
+    privateNetworkDescription: (provider: string) => string
+    inviteTokenPlaceholder: string
     deviceCodeOpened: (provider: string) => string
     reopenVerification: string
     copy: string

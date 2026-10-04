@@ -87,9 +87,10 @@ export interface OAuthProvider {
   disconnect_hint?: null | string
   disconnectable?: boolean
   docs_url: string
-  flow: 'device_code' | 'external' | 'pkce'
+  flow: 'device_code' | 'external' | 'form' | 'pkce'
   id: string
   name: string
+  setup?: null | { kind: 'public_or_token' }
   status: OAuthProviderStatus
 }
 

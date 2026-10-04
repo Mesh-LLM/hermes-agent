@@ -737,6 +737,7 @@ const sidebars: SidebarsConfig = {
         'integrations/index',
         'integrations/nous-portal',
         'integrations/providers',
+        'integrations/mesh-private-compute',
         'integrations/buzz',
         'user-guide/features/mcp',
         'user-guide/features/acp',

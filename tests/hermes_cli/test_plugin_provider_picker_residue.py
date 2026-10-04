@@ -117,6 +117,38 @@ def test_oauth_plugin_status_follows_the_credential_pool(plugin):
     assert auth.get_plugin_oauth_auth_status("openai-codex") == {"logged_in": False}
 
 
+def test_oauth_plugin_setup_runs_its_interactive_auth_handler(plugin, monkeypatch):
+    """A provider picked in ``hermes model`` can configure itself inline instead of stopping with
+    a second command, then receives the newly stored credential for live model discovery."""
+    from agent.credential_pool import AUTH_TYPE_API_KEY, PooledCredential, load_pool
+    from hermes_cli import model_setup_flows as flows
+
+    calls = []
+
+    def auth_handler(action, args):
+        calls.append(action)
+        if action != "add":
+            return False
+        load_pool("interactive-oauth").add_entry(PooledCredential(
+            provider="interactive-oauth", id="e1", label="configured", auth_type=AUTH_TYPE_API_KEY,
+            priority=0, source="manual:interactive", access_token="connection-token"))
+        return True
+
+    profile = plugin(ProviderProfile(
+        name="interactive-oauth", display_name="Interactive OAuth", auth_type="oauth_external",
+        auth_handler=auth_handler, fallback_models=("model-a",)))
+    picked = {}
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr(flows, "_pick_model_or_prompt", lambda models, prompt, **kwargs:
+                        picked.update(api_key=kwargs["confirm_api_key"], models=models) or models[0])
+    monkeypatch.setattr(flows, "_finish_model", lambda selected, *args, **kwargs: picked.update(selected=selected))
+
+    flows._model_flow_plugin_provider({}, profile.name)
+
+    assert calls == ["add"]
+    assert picked == {"api_key": "connection-token", "models": ["model-a"], "selected": "model-a"}
+
+
 def test_any_external_process_plugin_counts_as_signed_in_when_its_binary_resolves(plugin, monkeypatch, tmp_path):
     """The Desktop ``explicit_only`` filter (``build_model_options_payload`` behind
     ``tui_gateway/methods_complete.py::model.options``) keeps an out-of-tree ACP row exactly like the

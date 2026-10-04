@@ -446,6 +446,7 @@ export const zhHant = defineLocale({
       providerApiKeys: 'API 金鑰',
       providerCustomEndpoints: '自訂端點',
       providerLocalModels: '本地模型',
+      providerMeshLlm: 'Mesh LLM',
       gateway: '閘道',
       apiKeys: '工具與金鑰',
       keybinds: '鍵盤快捷鍵',
@@ -1736,6 +1737,25 @@ export const zhHant = defineLocale({
         transport: { title: '帳單連線失敗', message: '帳單請求在到達閘道前失敗。' },
         default: { title: '帳單請求失敗', message: '帳單請求失敗。' }
       }
+    },
+    meshllm: {
+      title: 'Mesh LLM 用戶端',
+      states: {
+        unconfigured: '未設定',
+        stopped: '已停止',
+        connected: '已連線',
+        disconnected: '未連線',
+        error: '連線錯誤'
+      },
+      peers: count => `${count} 個已連線節點`,
+      notConnected: '沒有使用中的連線',
+      start: '啟動',
+      stop: '停止',
+      restart: '重新啟動',
+      actionFailed: '無法控制 Mesh LLM 用戶端',
+      configureHint: '請先在帳戶中連接 Mesh LLM。',
+      modelsTitle: '可用模型',
+      noModels: '目前沒有可用模型。請啟動用戶端或檢查公開網路。'
     },
     providers: {
       connectAccount: '連結帳號',
@@ -3444,7 +3464,8 @@ export const zhHant = defineLocale({
     flowSubtitles: {
       pkce: '開啟瀏覽器登入，然後回到這裡繼續',
       device_code: '在瀏覽器中開啟驗證頁面 — Hermes 會自動連線',
-      external: '先在終端機登入一次，然後回來繼續聊天'
+      external: '先在終端機登入一次，然後回來繼續聊天',
+      form: '直接在此連線 — 無需終端機'
     },
     startingSignIn: provider => `正在為 ${provider} 啟動登入...`,
     verifyingCode: provider => `正在透過 ${provider} 驗證您的代碼...`,
@@ -3465,6 +3486,12 @@ export const zhHant = defineLocale({
     waitingAuthorize: '等待您授權...',
     externalPending: provider => `${provider} 透過自己的 CLI 登入。請在終端機執行此指令，然後回來選擇「我已登入」：`,
     signedIn: '我已登入',
+    connectTo: provider => `連線至 ${provider}`,
+    publicNetwork: '公開網路',
+    privateNetwork: '私人網路',
+    publicNetworkDescription: provider => `自動探索並連線至可用的公開 ${provider} 網路。`,
+    privateNetworkDescription: provider => `使用邀請權杖連線至私人 ${provider} 網路。`,
+    inviteTokenPlaceholder: '貼上邀請權杖',
     deviceCodeOpened: provider => `已在瀏覽器中開啟 ${provider}。請在那裡輸入此代碼：`,
     reopenVerification: '重新開啟驗證頁面',
     copy: '複製',

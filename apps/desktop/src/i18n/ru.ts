@@ -1532,6 +1532,25 @@ export const ru = defineLocale({
         curator: { label: 'Куратор', hint: 'Просмотр использования навыков' }
       }
     },
+    meshllm: {
+      title: 'Клиент Mesh LLM',
+      states: {
+        unconfigured: 'Не настроен',
+        stopped: 'Остановлен',
+        connected: 'Подключён',
+        disconnected: 'Нет соединения',
+        error: 'Ошибка соединения'
+      },
+      peers: count => `${count} подключённых узлов`,
+      notConnected: 'Нет активного соединения',
+      start: 'Запустить',
+      stop: 'Остановить',
+      restart: 'Перезапустить',
+      actionFailed: 'Не удалось управлять клиентом Mesh LLM',
+      configureHint: 'Сначала подключите Mesh LLM в разделе «Аккаунты».',
+      modelsTitle: 'Доступные модели',
+      noModels: 'Нет доступных моделей. Запустите клиент или проверьте публичную сеть.'
+    },
     providers: {
       connectAccount: 'Подключить аккаунт',
       haveApiKey: 'Ввести API-ключ вместо этого?',
@@ -3488,7 +3507,8 @@ export const ru = defineLocale({
     flowSubtitles: {
       pkce: 'Откроет браузер для входа, затем продолжит здесь',
       device_code: 'Откроет страницу подтверждения в браузере — Hermes подключится автоматически',
-      external: 'Войдите один раз в терминале, затем вернитесь в чат'
+      external: 'Войдите один раз в терминале, затем вернитесь в чат',
+      form: 'Подключитесь здесь — терминал не нужен'
     },
     startingSignIn: provider => `Начинаем вход для ${provider}...`,
     verifyingCode: provider => `Проверяем ваш код через ${provider}...`,
@@ -3509,6 +3529,12 @@ export const ru = defineLocale({
     externalPending: provider =>
       `${provider} входит через собственный CLI. Выполните эту команду в терминале, затем вернитесь и выберите «Я вошёл»:`,
     signedIn: 'Я вошёл',
+    connectTo: provider => `Подключение к ${provider}`,
+    publicNetwork: 'Публичная сеть',
+    privateNetwork: 'Частная сеть',
+    publicNetworkDescription: provider => `Найти доступную публичную сеть ${provider} и подключиться к ней.`,
+    privateNetworkDescription: provider => `Подключиться к частной сети ${provider} по токену приглашения.`,
+    inviteTokenPlaceholder: 'Вставьте токен приглашения',
     deviceCodeOpened: provider => `Мы открыли ${provider} в вашем браузере. Введите там этот код:`,
     reopenVerification: 'Открыть страницу подтверждения снова',
     copy: 'Копировать',

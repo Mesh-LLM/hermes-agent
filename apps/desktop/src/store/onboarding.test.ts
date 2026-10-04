@@ -13,7 +13,11 @@ import {
   requestDesktopOnboarding,
   saveOnboardingLocalEndpoint,
   setOnboardingModel,
-  submitOnboardingCode
+  setProviderFormMode,
+  setProviderFormSecret,
+  startProviderOAuth,
+  submitOnboardingCode,
+  submitProviderForm
 } from './onboarding'
 
 function baseState(overrides: Partial<DesktopOnboardingState> = {}): DesktopOnboardingState {
@@ -80,6 +84,74 @@ function fallbackTimeoutGateway(): OnboardingContext['requestGateway'] {
     throw new Error(`unexpected gateway method: ${method}`)
   }
 }
+
+describe('provider-owned GUI setup', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    $desktopOnboarding.set(baseState())
+  })
+
+  afterEach(() => {
+    window.localStorage.clear()
+    $desktopOnboarding.set(baseState())
+    vi.restoreAllMocks()
+  })
+
+  it('configures a private provider without opening a terminal flow', async () => {
+    const requests: Array<{ body?: unknown; path: string }> = []
+    installApiMock(async request => {
+      requests.push(request)
+
+      if (request.path === '/api/providers/oauth/meshllm/configure') {
+        return { ok: true, provider: 'meshllm' }
+      }
+
+      if (request.path.startsWith('/api/model/options')) {
+        return { providers: [] }
+      }
+
+      throw new Error(`unexpected api path: ${request.path}`)
+    })
+
+    const provider: OAuthProvider = {
+      ...makeOAuthProvider('meshllm', 'Mesh LLM'),
+      flow: 'form',
+      setup: { kind: 'public_or_token' }
+    }
+
+    const ctx: OnboardingContext = {
+      requestGateway: async method => {
+        if (method === 'reload.env') {
+          return { ok: true } as never
+        }
+
+        if (method === 'setup.status') {
+          return { provider_configured: true } as never
+        }
+
+        if (method === 'setup.runtime_check') {
+          return { ok: true, provider: 'meshllm' } as never
+        }
+
+        throw new Error(`unexpected gateway method: ${method}`)
+      }
+    }
+
+    await startProviderOAuth(provider, ctx)
+    expect($desktopOnboarding.get().flow).toMatchObject({ status: 'provider_form', mode: 'public' })
+
+    setProviderFormMode('private')
+    setProviderFormSecret('invite-secret')
+    await submitProviderForm(ctx)
+
+    expect(requests[0]).toMatchObject({
+      path: '/api/providers/oauth/meshllm/configure',
+      body: { mode: 'private', secret: 'invite-secret' }
+    })
+    expect(requests.some(request => request.path.endsWith('/start'))).toBe(false)
+    expect($desktopOnboarding.get()).toMatchObject({ configured: true, flow: { status: 'idle' } })
+  })
+})
 
 describe('refreshOnboarding', () => {
   it('keeps onboarding work in its initiating lifetime and profile', async () => {
